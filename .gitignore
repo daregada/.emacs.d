@@ -1,0 +1,60 @@
+# emacs
+*.elc
+*-autoloads.el
+custom.el
+private.el
+.emacs.desktop
+.emacs.desktop.lock
+.newsrc
+.newsrc.eld
+*.plstore
+elpa
+el-get/
+/history
+/games/*-scores
+request/
+url/
+server/
+image-dired/
+recentf
+tramp
+abbrev_defs
+bookmarks
+notes
+debbugs
+timelog
+/ido.last
+/kkcrc
+/cache/
+vendor/
+tmp/
+/straight/
+/transient/
+
+/eshell/lastdir
+/eshell/history
+
+# cask
+.cask
+
+# backup
+\#*\#
+*~
+
+# clojure
+nrepl-history
+
+# misc
+UnicodeData.txt
+/share/dict/*/migemo-dict
+/migemo-pattern
+/site-lisp/*/
+/etc/
+/emojis/
+/irony/
+.geiser_history.guile
+.auth.plist
+places
+# nsm-settings-file
+network-security.data
+.lsp-session-*
