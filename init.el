@@ -353,12 +353,11 @@
 	     ((file-base (shell-quote-argument (file-name-base buffer-file-name)))
 	      (file-name (shell-quote-argument (file-name-nondirectory buffer-file-name))))
 	   ;; 後で実行するときのコマンド名
-	   (setq my-command (concat "./" file-base))
+	   (setq my-command (format "./%s" file-base))
 	   ;; コンパイルコマンドにファイル名などを埋め込む
 	   (set (make-local-variable 'compile-command)
-		(concat "gcc -Wall -Wextra -std=gnu99 -o"
+		(format "gcc -Wall -Wextra -std=gnu99 -o%s %s"
 			file-base
-			" "
 			file-name
 			))
 	   ;; コンパイルを実行。画面が自動分割されて変換結果が表示される
@@ -425,7 +424,7 @@
       (when (string= file-ext ".c")
 	;; Cのソースファイルのバッファーにいる
 	;; 実行形式に変換後のコマンド名を設定
-	(setq my-command (concat "./" file-base))
+	(setq my-command (format "./%s" file-base))
 	;; 画面分割されていなければ、分割する
 	(when (one-window-p)
 	  (split-window))
