@@ -100,7 +100,7 @@
 
 ;; MELPA-stableのみ追加
 (add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 ;; 初期化
 (package-initialize)
