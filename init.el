@@ -106,6 +106,15 @@
 ;; 初期化
 (package-initialize)
 
+
+;;
+;; shell関連
+;;
+(require 'shell)
+;; プロンプトは読み取り専用
+(setq comint-prompt-read-only t)
+
+
 ;;
 ;; flycheck関連
 ;;
