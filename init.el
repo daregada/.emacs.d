@@ -113,7 +113,8 @@
 (require 'shell)
 ;; プロンプトは読み取り専用
 (setq comint-prompt-read-only t)
-
+;; プロンプトに返り値($?)を含める
+(setenv "PS1" "[\\u@\\h \\W ($(echo $?;))]\\$ ")
 
 ;;
 ;; flycheck関連
