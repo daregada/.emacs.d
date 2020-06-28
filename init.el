@@ -367,7 +367,7 @@
 	   (setq my-command (format "./%s" file-base))
 	   ;; コンパイルコマンドにファイル名などを埋め込む
 	   (set (make-local-variable 'compile-command)
-		(format "gcc -Wall -Wextra -std=gnu99 -o%s %s"
+		(format "gcc -Wall -Wextra -std=gnu99 -lm -o%s %s"
 			file-base
 			file-name
 			))
