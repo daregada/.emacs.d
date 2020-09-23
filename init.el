@@ -171,7 +171,8 @@
 
 ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
 (flycheck-define-clike-checker c-gcc-ja
-			       ("gcc" "-fsyntax-only" "-Wall" "-Wextra" "-std=gnu99")
+;			       ("gcc" "-fsyntax-only" "-Wall" "-Wextra" "-std=gnu99")
+			       ("gcc" "-Wall" "-Wextra" "-std=gnu99")
 			       c-mode)
 
 ;; チェッカーとして登録
