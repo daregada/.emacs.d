@@ -14,7 +14,7 @@
 (define-key global-map (kbd "C-z") 'undo)
 
 ;; F5キーとCtrl-C cとCtrl-C 5に、「編集中のプログラムを実行形式に変換する機能」を割り当て
-;; エラーが発生した場合は、下のウィンドウがflycheck-listの表示に戻り
+;; エラーが発生した場合は、下のウィンドウがflycheck-errorsの表示に戻り
 ;; 変換に成功した場合は、下のウィンドウがshellの表示に切り替わってコマンド名が挿入される
 (global-set-key (kbd "<f5>") 'save-and-compile)
 (global-set-key (kbd "C-c c") 'save-and-compile)
@@ -22,7 +22,7 @@
 
 ;; F6キーとCtrl-C sとCtrl-C 6に、「別ウィンドウ(または別バッファー)の選択」を割り当て
 ;; 画面が分割表示されているときは、ポインター(カーソル)が別ウィンドウに移る
-;; (shellバッファーのウィンドウから移った場合は下のウィンドウがflycheck-listの表示に戻る)
+;; (shellバッファーのウィンドウから移った場合は下のウィンドウがflycheck-errorsの表示に戻る)
 ;; 画面が分割表示されていないときは、表示内容が別のバッファー(ファイルや実行画面)に切り替わる
 (global-set-key (kbd "<f6>") 'other-window-or-buffer)
 (global-set-key (kbd "C-c s") 'other-window-or-buffer)
@@ -171,8 +171,7 @@
 
 ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
 (flycheck-define-clike-checker c-gcc-ja
-;			       ("gcc" "-fsyntax-only" "-Wall" "-Wextra" "-std=gnu99")
-			       ("gcc" "-Wall" "-Wextra" "-std=gnu99")
+			       ("gcc" "-fsyntax-only" "-fshow-column" "-Wall" "-Wextra" "-std=gnu99")
 			       c-mode)
 
 ;; チェッカーとして登録
@@ -184,8 +183,11 @@
 ;;                    c++-mode)
 ;; (add-to-list 'flycheck-checkers 'c++-g++-ja)
 
-;; エラーが表示されるまでの秒数
-(setq flycheck-display-errors-delay 0.5)
+;; エラーを表示する関数をエコー領域を使わないものに変更
+(setq flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list)
+
+;; モード切り替え時と保存時とEnterキー入力時にチェックする 
+(setq flycheck-check-syntax-automatically '(mode-enabled save new-line))
 
 ;; エラー・警告・備考のフェイス設定
 (set-face-foreground 'flycheck-error "white")
@@ -197,6 +199,8 @@
 (set-face-foreground 'flycheck-info "lightblue")
 					;(set-face-background 'flycheck-info "lightblue")
 
+;; 前回のコンパイルの結果
+(setq has-error-or-warnings nil)
 
 ;;
 ;; display-buffer-alist関連
@@ -289,7 +293,7 @@
    (flycheck-mode 1)
    ;; エラー・警告を別バッファーに一覧表示する
    (flycheck-list-errors)
-
+   
    ;;
    ;; バックアップファイルを作らない
    ;;
@@ -353,13 +357,14 @@
 	   (shell-and-insert))
 	 )
 	(t
-	 ;; flycheckによるエラーチェック開始
-	 (when (not flycheck-mode)
-	   (flycheck-mode 1)
-	   (flycheck-list-errors))
-	 
 	 ;; テンプレートを読んだ直後は変更フラグなしのため、問答無用で保存
 	 (save-buffer)
+
+	 ;; flycheckによるエラーチェックの結果を更新
+	 (when (flycheck-mode)
+	   (flycheck-buffer)
+	   (sit-for 0.5)
+	   )
 
 	 (let
 	     ((file-base (shell-quote-argument (file-name-base buffer-file-name)))
@@ -386,11 +391,21 @@
   (if (one-window-p)
       ;; ウィンドウが分割されていなければ、バッファを切り換える
       (switch-to-buffer (other-buffer))
-    ;; shellバッファーから別のウィンドウに移動するときはflycheck-listに切り替える
+    ;; shellバッファーから別のウィンドウに移動するときはflycheck-errorsに切り替える
     (when (string= (buffer-name) "*shell*")
-      (switch-buffer-to-flycheck-list "*shell*")))
+      (switch-buffer-to-flycheck-errors "*shell*")))
   ;; ウィンドウが分割されていれば、別ウィンドウを順に選択する
-  (other-window 1))
+  (if (and (not (flycheck-errors-has-list-p))
+	   (string= (buffer-name) "*Flycheck errors*")
+	   (eq has-error-or-warnings t))
+      (progn
+	(set-window-buffer
+	 (get-buffer-window (current-buffer))
+	 (get-buffer "*compilation*"))
+      )
+    (when (string= (buffer-name) "*compilation*")
+      (switch-buffer-to-flycheck-errors "*compilation*"))
+    (other-window 1)))
 
 
 ;; 
@@ -464,28 +479,47 @@
 	      (search-forward "警告:" nil t)) t nil))))
 
 ;;
-;; コンパイル結果のバッファをflycheck-listに切り替える
+;; コンパイル結果のバッファをflycheck-errorsに切り替える
 ;;
-(defun switch-buffer-to-flycheck-list (buf)
-  (if (get-buffer "*Flycheck errors*")
-      (set-window-buffer
-       (get-buffer-window buf)
-       (get-buffer "*Flycheck errors*"))
-    (delete-windows-on buf))
+(defun switch-buffer-to-flycheck-errors (buf)
+  (cond ((get-buffer "*Flycheck errors*")
+	 (set-window-buffer
+	  (get-buffer-window buf)
+	  (get-buffer "*Flycheck errors*"))
+	 )
+	(t
+	 (delete-windows-on buf)))
   t)
 
+;;
+(defun flycheck-errors-has-list-p ()
+  (cond ((get-buffer "*Flycheck errors*")
+	 (save-current-buffer
+	   (set-buffer (get-buffer "*Flycheck errors*"))
+	   (save-excursion
+	     (if (eq (point-min) (point-max))
+		 nil t))))
+	(t
+	 nil)))
+  
+  
+
+
 ;; compilationバッファに
-;; エラー・警告があればflycheck-listに切り替え
+;; エラー・警告があればflycheck-errorsに切り替え
 ;; エラー・警告がなければshellに切り替える
 (defun switch-compilation-buffer (buf str)
   (cond ((or (string-match "abnormally" str)
-	     (compilation-buffer-has-warning-p buf))    
+	     (compilation-buffer-has-warning-p buf))
+	 (setq has-error-or-warnings t)
 	 (message "エラー・警告を修正してください")
-	 (switch-buffer-to-flycheck-list "*compilation*"))
+	 (switch-buffer-to-flycheck-errors "*compilation*"))
 	(t
+	 (setq has-error-or-warnings nil)
 	 (message "変換成功。実行できます")
 	 (shell-and-insert)
 	 )))
+
 
 ;; compile終了時に実行する関数リストに追加
 (unless compilation-finish-functions
@@ -502,8 +536,7 @@
   (let ((file-name (format "~/prog%02d.c" number))
 	)
     (find-file file-name)
-    ;; 最初に保存するまではエラーチェックしない
-    (flycheck-mode -1)))
+    ))
 
 ;; emacs-lisp-mode用の設定
 (add-hook 'emacs-lisp-mode-hook
