@@ -513,7 +513,9 @@
 	     (compilation-buffer-has-warning-p buf))
 	 (setq has-error-or-warnings t)
 	 (message "エラー・警告を修正してください")
-	 (switch-buffer-to-flycheck-errors "*compilation*"))
+	 ;; flycheck-errorsにリストがあればflycheck-errorsに切り換える
+	 (if (flycheck-errors-has-list-p)
+	     (switch-buffer-to-flycheck-errors "*compilation*")))
 	(t
 	 (setq has-error-or-warnings nil)
 	 (message "変換成功。実行できます")
