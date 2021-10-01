@@ -440,7 +440,7 @@
     ;; ファイルバッファー以外にいる
     (shell)
     ;; Emacs終了時にこのシェルが実行中でも問い合わせしない
-    (process-kill-without-query (get-process "shell"))
+    (set-process-query-on-exit-flag (get-process "shell") nil)
     (insert-my-command-at-end)
     )
    (t
@@ -461,7 +461,7 @@
 	;; すでに実行中なら現在のウィンドウに表示(バッファー切り替え)
 	(shell)
 	;; Emacs終了時にこのシェルが実行中でも問い合わせしない
-	(process-kill-without-query (get-process "shell"))
+	(set-process-query-on-exit-flag (get-process "shell") nil)
 	;; バッファー末尾にコマンド名を挿入
 	(insert-my-command-at-end))))
    ))
