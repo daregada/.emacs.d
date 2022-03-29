@@ -332,6 +332,7 @@
   '("/\\.bash_profile$" . "Bash profile template")
   [("Bash profile template: "
     "export LANG=ja_JP.UTF-8\n"
+    "export PATH=/snap/bin:$PATH\n"
     "source ~/.bashrc\n"
     )])
 
