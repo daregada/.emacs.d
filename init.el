@@ -538,6 +538,8 @@
   (interactive "nProgram Number: ")
   (let ((file-name (format "~/prog%02d.c" number))
 	)
+    (when (eq buffer-file-name nil)
+      	(other-window 1))
     (find-file file-name)
     ))
 
