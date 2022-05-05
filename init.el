@@ -2,6 +2,10 @@
 ;; Edu(logos)用のinit.el
 ;; ~/.emacs.dに置くこと
 
+;; Emacs 28.1のNative Compilationの警告を抑制
+(setq native-comp-async-report-warnings-errors nil
+      comp-async-report-warnings-errors nil)
+
 ;;
 ;; キーカスタマイズ関連
 ;;
