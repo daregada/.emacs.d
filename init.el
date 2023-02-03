@@ -362,6 +362,9 @@
 	   (shell-and-insert))
 	 )
 	(t
+	 ;; ファイル全体のインデントを整える
+	 (indent-whole-file)
+	 
 	 ;; テンプレートを読んだ直後は変更フラグなしのため、問答無用で保存
 	 (save-buffer)
 
@@ -554,3 +557,19 @@
 	       (enable-paredit-mode))
 	     (show-paren-mode)
 	     ))
+
+;; 
+;; 現在のファイル全体をインデントする
+;; 
+(defun indent-whole-file ()
+  (interactive)
+  (when (not (eq buffer-file-name nil))
+    ;; ファイルバッファーにいる
+    (let ((file-ext (file-name-extension buffer-file-name t))
+	  (file-base (shell-quote-argument (file-name-base buffer-file-name)))
+	  )
+      (when (string= file-ext ".c")
+	;; Cのソースファイルのバッファーにいる
+	(indent-region (point-min) (point-max))
+	))))
+
