@@ -58,3 +58,4 @@ places
 # nsm-settings-file
 network-security.data
 .lsp-session-*
+/eln-cache/
