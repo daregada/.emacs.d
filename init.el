@@ -54,8 +54,10 @@
 ;;
 ;; 起動時画面関連
 ;;
-;; 先頭行にメニューバーを表示しない(端末版ではマウス操作できないため)
-(menu-bar-mode -1)
+;; メニューバーなどを表示しない
+(menu-bar-mode 0)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
 
 ;; Emacsのスタート画面を消す
 (setq inhibit-startup-screen t)
@@ -436,10 +438,10 @@
 	       (and (not (eq buffer-file-name nil))
 		    (string= (file-name-extension buffer-file-name t) ".c"))
 	       )
-      (message (concat "アドバイス実行中:"
-		       (buffer-name prev-buf)
-		       "->"
-		       (buffer-name)))
+;      (message (concat "アドバイス実行中:"
+;		       (buffer-name prev-buf)
+;		       "->"
+;		       (buffer-name)))
       (set-window-buffer (next-window (selected-window) 'none) "*Flycheck errors*")
       )))
 
