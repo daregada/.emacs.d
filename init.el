@@ -6,6 +6,11 @@
 (setq native-comp-async-report-warnings-errors nil
       comp-async-report-warnings-errors nil)
 
+;; カスタムファイルの指定
+(setq custom-file "~/.emacs.d/custom.el")
+(if (file-exists-p (expand-file-name custom-file))
+    (load-file (expand-file-name custom-file)))
+
 ;; マウスでポイントの位置変更や範囲コピー、スクロールを可能に
 (xterm-mouse-mode t)
 (mouse-wheel-mode t)
