@@ -138,12 +138,13 @@
 (setenv "PS1" "[\\u@\\h \\W ($(echo $?;))]\\$ ")
 
 ;;
-;; flycheck関連
+;; 必須パッケージ関連
 ;;
-;; flychekがインストールされていなければ自動的にインストール
-(unless (package-installed-p 'flycheck)
+;; 必須パッケージがインストールされていなければ自動的にインストール
+(unless (and (package-installed-p 'flycheck)
+	    (package-installed-p 'powerline))
   (with-current-buffer (get-buffer "*scratch*")
-    (insert "最初の一回だけ、flycheckパッケージの導入作業を行ないます。\n"
+    (insert "最初の一回だけ、各種パッケージの導入作業を行ないます。\n"
 	    "導入作業が終わるまでしばらく時間がかかります。\n\n"))
   (redisplay)
   (unless package--initialized
@@ -152,7 +153,44 @@
     (package-refresh-contents))
   (unless (package-installed-p 'flycheck)
     (package-install 'flycheck))
+  (unless (package-installed-p 'powerline)
+    (package-install 'flycheck))
   )
+
+;;
+;; powerline関連
+;;
+(require 'powerline)
+(powerline-default-theme)
+(set-face-attribute 'mode-line nil
+                    :foreground "#fff"
+                    :background "#000000"
+                    :box nil)
+
+(set-face-attribute 'powerline-active1 nil
+                    :foreground "#fff"
+                    :background "#6699FF"
+                    :inherit 'mode-line)
+
+(set-face-attribute 'powerline-active2 nil
+                    :foreground "#fff"
+                    :background "#3366FF"
+                    :inherit 'mode-line)
+
+(set-face-attribute 'mode-line-inactive nil
+                    :foreground "#444"
+                    :background "#ddd"
+                    :box nil)
+
+(set-face-attribute 'powerline-inactive1 nil
+                    :foreground "#444"
+                    :background "#ccc"
+                    :inherit 'mode-line)
+
+(set-face-attribute 'powerline-inactive2 nil
+                    :foreground "#444"
+                    :background "#bbb"
+                    :inherit 'mode-line)
 
 (require 'flycheck)
 
