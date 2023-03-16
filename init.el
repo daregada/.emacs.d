@@ -89,8 +89,10 @@
 ;;
 ;; 起動処理が完了後
 ;;
-(defadvice command-line-1 (after my-scratch-is-ready activate)
-  "*scratch*に起動後の注意書きを表示"
+(advice-add 'command-line-1 :after #'display-notes)
+
+(defun display-notes (&rest args)
+;  "*scratch*に起動後の注意書きを表示"
   (with-current-buffer (get-buffer "*scratch*")
     (when (not (one-window-p))
       (delete-windows-on (get-buffer "*Compile-Log*")))
@@ -102,10 +104,9 @@
 	    "一番下に「Find File:」と出たら、ファイル名を入力しEnterキーを押してください。\n\n"
 	    "ヒント: 演習用のファイル(progNN.c)であれば、もっと簡単な方法があります。\n"
 	    "「<f7>」(F7キー)を押し、一番下に「Program Number:」と出たら、プログラム番号(1桁か2桁の整数)を入力し、Enterキーを押してください。\n\n"
-)
+	    )
     (insert "起動時の処理が完了しました。\n")
     (set-buffer-modified-p nil)))
-
 
 ;;
 ;; package.el関連
