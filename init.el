@@ -425,6 +425,23 @@
       (switch-buffer-to-flycheck-errors "*compilation*"))
     (other-window 1)))
 
+;;
+;; マウス操作で*shell*からソースコードに切り替えた時に*Flycheck errors*を表示
+;;
+(advice-add 'select-window :before #'check-select-window)
+
+(defun check-select-window (&rest args)
+  (let ((prev-buf (window-buffer (next-window (selected-window) 'none))))
+    (when (and (string= (buffer-name prev-buf) "*shell*")
+	       (and (not (eq buffer-file-name nil))
+		    (string= (file-name-extension buffer-file-name t) ".c"))
+	       )
+      (message (concat "アドバイス実行中:"
+		       (buffer-name prev-buf)
+		       "->"
+		       (buffer-name)))
+      (set-window-buffer (next-window (selected-window) 'none) "*Flycheck errors*")
+      )))
 
 ;; 
 ;; 現在のポイントにコマンド名を挿入
