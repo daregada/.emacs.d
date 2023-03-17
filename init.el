@@ -72,7 +72,7 @@
 
 ;; ヘッダーラインの見た目を変える
 (set-face-foreground 'header-line "black")
-(set-face-background 'header-line "lightgray")
+(set-face-background 'header-line "gray")
 (set-face-attribute 'header-line nil
 		    :inherit nil
 		    :overline nil
@@ -142,10 +142,10 @@
     ))
 
 (defun all-packages-installed-p (&rest args)
-  (catch 'my-early-return
+  (catch 'early-return-in-all-packages-installed-p
     (dolist (package my-favorite-packages)
       (unless (package-installed-p package)
-	(throw 'my-early-return nil)))
+	(throw 'early-return-in-all-packages-installed-p nil)))
     t))
 
 ;;
@@ -154,7 +154,8 @@
 (unless (all-packages-installed-p)
   (with-current-buffer (get-buffer "*scratch*")
     (insert "最初の一回だけ、各種パッケージの導入作業を行ないます。\n"
-	    "導入作業が終わるまでしばらく時間がかかります。\n\n"))
+	    "導入作業が終わるまでしばらく時間がかかります。\n"
+	    "最上行がオレンジ色になるまでお待ちください。\n\n"))
   (redisplay)
   (unless package--initialized
     (package-initialize))
