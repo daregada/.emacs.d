@@ -72,7 +72,7 @@
 
 ;; ヘッダーラインの見た目を変える
 (set-face-foreground 'header-line "black")
-(set-face-background 'header-line "orange")
+(set-face-background 'header-line "lightgray")
 (set-face-attribute 'header-line nil
 		    :inherit nil
 		    :overline nil
@@ -113,7 +113,9 @@
 	    "「<f7>」(F7キー)を押し、一番下に「Program Number:」と出たら、プログラム番号(1桁か2桁の整数)を入力し、Enterキーを押してください。\n\n"
 	    )
     (insert "起動時の処理が完了しました。\n")
-    (set-buffer-modified-p nil)))
+    (set-buffer-modified-p nil)
+    (set-face-background 'header-line "orange")
+))
 
 ;;
 ;; package.el関連
