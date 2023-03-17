@@ -15,8 +15,8 @@
 (xterm-mouse-mode t)
 (mouse-wheel-mode t)
 ;; ホイールでスクロール
-(global-set-key [mouse-4] '(lambda () (interactive) (scroll-down 1)))
-(global-set-key [mouse-5] '(lambda () (interactive) (scroll-up   1)))
+(global-set-key [mouse-4] #'(lambda () (interactive) (scroll-down 1)))
+(global-set-key [mouse-5] #'(lambda () (interactive) (scroll-up   1)))
 ;; 右クリックでリージョンをコピー
 (global-set-key [mouse-2] #'copy-region-as-kill)
 
@@ -624,7 +624,7 @@
 
 ;; emacs-lisp-mode用の設定
 (add-hook 'emacs-lisp-mode-hook
-	  '(lambda ()
+	  #'(lambda ()
 	     (when (require 'paredit nil t)
 	       (enable-paredit-mode))
 	     (show-paren-mode)
