@@ -120,9 +120,9 @@
 ;;
 (require 'package)
 
-;; MELPA-stableのみ追加
-(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-;(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;; MELPAのみ追加
+;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 ;; 初期化
 (package-initialize)
@@ -142,7 +142,8 @@
 ;;
 ;; 必須パッケージがインストールされていなければ自動的にインストール
 (unless (and (package-installed-p 'flycheck)
-	    (package-installed-p 'powerline))
+	     (package-installed-p 'powerline)
+	     (package-installed-p 'auto-complete))
   (with-current-buffer (get-buffer "*scratch*")
     (insert "最初の一回だけ、各種パッケージの導入作業を行ないます。\n"
 	    "導入作業が終わるまでしばらく時間がかかります。\n\n"))
@@ -154,7 +155,9 @@
   (unless (package-installed-p 'flycheck)
     (package-install 'flycheck))
   (unless (package-installed-p 'powerline)
-    (package-install 'flycheck))
+    (package-install 'powerline))
+  (unless (package-installed-p 'auto-complete)
+    (package-install 'auto-complete))
   )
 
 ;;
@@ -394,6 +397,10 @@
     "export PATH=/snap/emacs/current/usr/bin:$PATH\n"
     "source ~/.bashrc\n"
     )])
+
+(require 'auto-complete)
+(global-auto-complete-mode t)
+(setq ac-auto-start 3)
 
 ;; 
 ;; 自作コマンドと関数
