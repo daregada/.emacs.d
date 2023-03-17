@@ -122,13 +122,48 @@
 ;;
 (require 'package)
 
-;; MELPAのみ追加
+;; MELPAに限定
+(setq package-archives
+      '(("melpa" . "https://melpa.org/packages/")))
 ;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;;(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 ;; 初期化
 (package-initialize)
 
+;;
+;; 必須パッケージ関連
+;;
+(defvar my-favorite-packages
+  '(
+    flycheck
+    powerline
+    auto-complete
+    ))
+
+(defun all-packages-installed-p (&rest args)
+  (catch 'my-early-return
+    (dolist (package my-favorite-packages)
+      (unless (package-installed-p package)
+	(throw 'my-early-return nil)))
+    t))
+
+;;
+;; 必須パッケージがインストールされていなければ自動的にインストール
+;;
+(unless (all-packages-installed-p)
+  (with-current-buffer (get-buffer "*scratch*")
+    (insert "最初の一回だけ、各種パッケージの導入作業を行ないます。\n"
+	    "導入作業が終わるまでしばらく時間がかかります。\n\n"))
+  (redisplay)
+  (unless package--initialized
+    (package-initialize))
+  (unless package-archive-contents
+    (package-refresh-contents))
+  (dolist (package my-favorite-packages)
+    (unless (package-installed-p package)
+      (package-install package)))
+  )
 
 ;;
 ;; shell関連
@@ -138,29 +173,6 @@
 (setq comint-prompt-read-only t)
 ;; プロンプトに返り値($?)を含める
 (setenv "PS1" "[\\u@\\h \\W ($(echo $?;))]\\$ ")
-
-;;
-;; 必須パッケージ関連
-;;
-;; 必須パッケージがインストールされていなければ自動的にインストール
-(unless (and (package-installed-p 'flycheck)
-	     (package-installed-p 'powerline)
-	     (package-installed-p 'auto-complete))
-  (with-current-buffer (get-buffer "*scratch*")
-    (insert "最初の一回だけ、各種パッケージの導入作業を行ないます。\n"
-	    "導入作業が終わるまでしばらく時間がかかります。\n\n"))
-  (redisplay)
-  (unless package--initialized
-    (package-initialize))
-  (unless package-archive-contents
-    (package-refresh-contents))
-  (unless (package-installed-p 'flycheck)
-    (package-install 'flycheck))
-  (unless (package-installed-p 'powerline)
-    (package-install 'powerline))
-  (unless (package-installed-p 'auto-complete)
-    (package-install 'auto-complete))
-  )
 
 ;;
 ;; powerline関連
