@@ -140,6 +140,8 @@
     flycheck
     powerline
     auto-complete
+    ac-c-headers
+    auto-save-buffers-enhanced
     ))
 
 (defun all-packages-installed-p (&rest args)
@@ -211,6 +213,14 @@
                     :background "#bbb"
                     :inherit 'mode-line)
 
+;;
+;; auto-complete関連
+;;
+(require 'auto-complete)
+(require 'ac-c-headers)
+(global-auto-complete-mode t)
+(setq ac-auto-start 2)
+
 ;; (with-eval-after-load 'flycheck
 ;;   (defconst flycheck-error-list-format [("File" 8 t)
 ;; 					("Line" 8 flycheck-error-list-entry-< :right-align t)
@@ -275,16 +285,13 @@
 ;; エラーを表示する関数をエコー領域を使わないものに変更
 (setq flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list)
 
-;; モード切り替え時、保存時、Enterキー入力時、一定時間経過後にチェックするか
+;; モード切り替え時と保存時に自動チェックする
 (setq flycheck-check-syntax-automatically '(
 					    mode-enabled
 					    save
-					    new-line
+					    ;new-line ; auto-completeとの衝突を避けるため
 					    ;idle-change
 					    ))
-
-;; n秒間何もしていないとチェックする
-;;(setq flycheck-idle-change-delay 15)
 
 ;; エラー・警告・備考のフェイス設定
 (set-face-foreground 'flycheck-error "white")
@@ -389,6 +396,12 @@
    (flycheck-mode 1)
    ;; エラー・警告を別バッファーに一覧表示する
    (flycheck-list-errors)
+
+   ;;
+   ;; auto-complete関連
+   ;;
+   (add-to-list 'ac-sources 'ac-source-c-headers)
+   (add-to-list 'ac-sources 'ac-source-c-header-symbols t)
    
    ;;
    ;; バックアップファイルを作らない
@@ -432,9 +445,18 @@
     "source ~/.bashrc\n"
     )])
 
-(require 'auto-complete)
-(global-auto-complete-mode t)
-(setq ac-auto-start 3)
+;;
+;; auto-save-buffers-enhanced
+;;
+(require 'auto-save-buffers-enhanced)
+;;; 2秒後に保存
+(setq auto-save-buffers-enhanced-interval 2)
+;;; Cソースファイルのみ自動保存を有効にする
+(setq auto-save-buffers-enhanced-include-regexps '(".+\\.c$"))
+;;; Wroteのメッセージを抑制
+(setq auto-save-buffers-enhanced-quiet-save-p t)
+(auto-save-buffers-enhanced t)
+
 
 ;; 
 ;; 自作コマンドと関数
@@ -529,6 +551,14 @@
       (set-window-buffer (next-window (selected-window) 'none) "*Flycheck errors*")
       )))
 
+(advice-add 'next-line :after #'next-line--flycheck-buffer)
+
+(defun next-line--flycheck-buffer (&rest args)
+  (when (and (not (eq buffer-file-name nil))
+	     (string= (file-name-extension buffer-file-name t) ".c"))
+    (when (buffer-modified-p)
+      (save-buffer))
+    ))
 ;; 
 ;; 現在のポイントにコマンド名を挿入
 ;; 
