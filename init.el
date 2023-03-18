@@ -139,8 +139,8 @@
   '(
     flycheck
     powerline
-    auto-complete
-    ac-c-headers
+    ;auto-complete
+    ;ac-c-headers
     auto-save-buffers-enhanced
     ))
 
@@ -216,10 +216,10 @@
 ;;
 ;; auto-complete関連
 ;;
-(require 'auto-complete)
-(require 'ac-c-headers)
-(global-auto-complete-mode t)
-(setq ac-auto-start 2)
+;(require 'auto-complete)
+;(require 'ac-c-headers)
+;(global-auto-complete-mode t)
+;(setq ac-auto-start 2)
 
 ;; (with-eval-after-load 'flycheck
 ;;   (defconst flycheck-error-list-format [("File" 8 t)
@@ -289,7 +289,7 @@
 (setq flycheck-check-syntax-automatically '(
 					    mode-enabled
 					    save
-					    ;new-line ; auto-completeとの衝突を避けるため
+					    new-line ; auto-completeと併用するときはコメントにすること
 					    ;idle-change
 					    ))
 
@@ -400,8 +400,8 @@
    ;;
    ;; auto-complete関連
    ;;
-   (add-to-list 'ac-sources 'ac-source-c-headers)
-   (add-to-list 'ac-sources 'ac-source-c-header-symbols t)
+   ;(add-to-list 'ac-sources 'ac-source-c-headers)
+   ;(add-to-list 'ac-sources 'ac-source-c-header-symbols t)
    
    ;;
    ;; バックアップファイルを作らない
@@ -551,14 +551,16 @@
       (set-window-buffer (next-window (selected-window) 'none) "*Flycheck errors*")
       )))
 
-(advice-add 'next-line :after #'next-line--flycheck-buffer)
+;; next-line実行時に自動保存してflycheckを動かす
+;(advice-add 'next-line :after #'next-line--flycheck-buffer)
 
-(defun next-line--flycheck-buffer (&rest args)
-  (when (and (not (eq buffer-file-name nil))
-	     (string= (file-name-extension buffer-file-name t) ".c"))
-    (when (buffer-modified-p)
-      (save-buffer))
-    ))
+;(defun next-line--flycheck-buffer (&rest args)
+;  (when (and (not (eq buffer-file-name nil))
+;	     (string= (file-name-extension buffer-file-name t) ".c"))
+;    (when (buffer-modified-p)
+;      (save-buffer))
+;    ))
+
 ;; 
 ;; 現在のポイントにコマンド名を挿入
 ;; 
