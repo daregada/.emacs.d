@@ -211,10 +211,21 @@
                     :background "#bbb"
                     :inherit 'mode-line)
 
+;; (with-eval-after-load 'flycheck
+;;   (defconst flycheck-error-list-format [("File" 8 t)
+;; 					("Line" 8 flycheck-error-list-entry-< :right-align t)
+;;                                         ("Col" 4 nil :right-align t)
+;;                                         ("Level" 5 flycheck-error-list-entry-level-<)
+;;                                         ("ID" 2 t)
+;;                                         ("Message (Checker)" 0 t)])
+;;   ;(flycheck-pos-tip-mode)
+;;   )
+
 (require 'flycheck)
 
+
 ;; flycheck-error-listのID欄の横幅を6->3に
-(aset flycheck-error-list-format 3 '("ID" 3 t))
+;(aset flycheck-error-list-format 3 '("ID" 6 t))
 
 ;; チェックに使わないチェッカーの既定値
 ;; インストールされていないclang, cppcheckと、日本語未対応のc/c++-gcc
@@ -264,8 +275,16 @@
 ;; エラーを表示する関数をエコー領域を使わないものに変更
 (setq flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list)
 
-;; モード切り替え時と保存時とEnterキー入力時にチェックする 
-(setq flycheck-check-syntax-automatically '(mode-enabled save new-line))
+;; モード切り替え時、保存時、Enterキー入力時、一定時間経過後にチェックするか
+(setq flycheck-check-syntax-automatically '(
+					    mode-enabled
+					    save
+					    new-line
+					    ;idle-change
+					    ))
+
+;; n秒間何もしていないとチェックする
+;;(setq flycheck-idle-change-delay 15)
 
 ;; エラー・警告・備考のフェイス設定
 (set-face-foreground 'flycheck-error "white")
@@ -275,7 +294,6 @@
 (set-face-background 'flycheck-warning "orange")
 (set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
 (set-face-foreground 'flycheck-info "lightblue")
-					;(set-face-background 'flycheck-info "lightblue")
 
 ;; 前回のコンパイルの結果
 (setq has-error-or-warnings nil)
