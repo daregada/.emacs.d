@@ -305,7 +305,7 @@
 
 (require 'flycheck)
 ;; flycheck-error-listのID欄の横幅を6->2に
-(aset flycheck-error-list-format 4 '("ID" 2 t))
+(aset flycheck-error-list-format 4 '("ID" 3 t))
 
 ;; チェックに使わないチェッカーの既定値
 ;; インストールされていないclang, cppcheckと、日本語未対応のc/c++-gcc
