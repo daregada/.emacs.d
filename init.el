@@ -455,7 +455,7 @@
    ;; Enterキーによる挿入行を字下げする
    (define-key c-mode-base-map "\C-m" 'c-context-line-break)
    ;; BackspaceキーやCtrl-Dキーで複数のスペース・改行を一括削除し、
-   (c-toggle-hungry-state 1)
+   ;; (c-toggle-hungry-state 1)
    ;; 「;」や「}」を入力すると自動的に改行する
    ;; (c-toggle-auto-newline 1)
    ;; 「else」と「else if」は、直前の「}」と同じ行にくっつける
