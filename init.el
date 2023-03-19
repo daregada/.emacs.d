@@ -6,10 +6,25 @@
 (setq native-comp-async-report-warnings-errors nil
       comp-async-report-warnings-errors nil)
 
-;; カスタムファイルの指定
+;; カスタムファイルの指定。カスタム設定がここに保存されるようになる
 (setq custom-file "~/.emacs.d/custom.el")
 (if (file-exists-p (expand-file-name custom-file))
     (load-file (expand-file-name custom-file)))
+
+;;
+;; 起動時画面関連
+;;
+;; メニューバーなどを表示しない
+(menu-bar-mode 0)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+
+;; Emacsのスタート画面を消す
+(setq inhibit-startup-screen t)
+
+;; 起動時にscratchバッファー先頭のメッセージを出さない
+(setq initial-scratch-message nil)
+
 
 ;; マウスでポイントの位置変更や範囲コピー、スクロールを可能に
 (xterm-mouse-mode t)
@@ -55,20 +70,6 @@
 (define-key global-map (kbd "<f10>") 'newline-and-indent)
 (define-key lisp-interaction-mode-map (kbd "<f10>") 'eval-print-last-sexp)
 
-
-;;
-;; 起動時画面関連
-;;
-;; メニューバーなどを表示しない
-(menu-bar-mode 0)
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-
-;; Emacsのスタート画面を消す
-(setq inhibit-startup-screen t)
-
-;; 起動時にscratchバッファー先頭のメッセージを出さない
-(setq initial-scratch-message nil)
 
 ;; ヘッダーラインの見た目を変える
 (set-face-foreground 'header-line "black")
@@ -138,8 +139,6 @@
   '(
     flycheck
     powerline
-    ;auto-complete
-    ;ac-c-headers
     auto-save-buffers-enhanced
     ))
 
@@ -178,13 +177,20 @@
 (setenv "PS1" "[\\u@\\h \\W ($(echo $?;))]\\$ ")
 
 ;;
+;; which-function-mode関連
+;;
+;; ファイル名はwhich-func.el
+(require 'which-func)
+(set-face-foreground 'which-func "orange")
+(setq which-func-unknown "関数外")
+(setq which-func-modes '(c-mode emacs-lisp-mode))
+(which-function-mode t)
+
+;;
 ;; powerline関連
 ;;
 (setq powerline-display-buffer-size nil)
 (setq powerline-display-mule-info nil)
-(defface which-func '((t
-                       :foreground "LightSkyBlue"))
-  "Face used to which-func mode line function names.")
 
 (require 'powerline)
 (defun powerline-my-theme ()
@@ -212,39 +218,48 @@
                                 (when powerline-display-buffer-size
                                   (powerline-buffer-size face0 'l))
                                 ;; 文字エンコーディング(UUUなど)
-                                     (when powerline-display-mule-info
-                                       (powerline-raw mode-line-mule-info face0 'l))
-                                     ;; バッファID (ファイル名など)
-                                     (powerline-buffer-id `(mode-line-buffer-id ,face0) 'l)
-                                     (when (and (boundp 'which-func-mode) which-func-mode)
-                                       (powerline-raw which-func-format face0 'l))
-                                     (powerline-raw " " face0)
-                                     (funcall separator-left face0 face1)
-                                     (when (and (boundp 'erc-track-minor-mode) erc-track-minor-mode)
-                                       (powerline-raw erc-modified-channels-object face1 'l))
-                                     (powerline-major-mode face1 'l)
-                                     (powerline-process face1)
-                                     (powerline-minor-modes face1 'l)
-                                     (powerline-narrow face1 'l)
-                                     (powerline-raw " " face1)
-                                     (funcall separator-left face1 face2)
-                                     (powerline-vc face2 'r)
-                                     (when (bound-and-true-p nyan-mode)
-                                       (powerline-raw (list (nyan-create)) face2 'l))))
-                          (rhs (list (powerline-raw global-mode-string face2 'r)
-                                     (funcall separator-right face2 face1)
-                                     ;(unless window-system
-                                     ;  (powerline-raw (char-to-string #xe0a1) face1 'l))
-                                     (powerline-raw "%4l行" face1 'l)
-                                     (powerline-raw ":" face1 'l)
-                                     (powerline-raw "%3c桁" face1 'r)
-                                     (funcall separator-right face1 face0)
-                                     (powerline-raw " " face0)
-                                     ;(powerline-raw "%6p" face0 'r)
-                                     (when powerline-display-hud
-                                       (powerline-hud face0 face2))
-                                     (powerline-fill face0 0)
-                                     )))
+                                (when powerline-display-mule-info
+                                  (powerline-raw mode-line-mule-info face0 'l))
+                                ;; バッファID (ファイル名など)
+                                (powerline-buffer-id `(mode-line-buffer-id ,face0) 'l)
+                                
+                                (when (and (boundp 'which-func-mode)
+                                           which-func-mode)
+                                  (powerline-raw which-func-format face0 'l))
+                                
+                                (powerline-raw " " face0)
+                                (funcall separator-left face0 face1)
+                                
+                                ;; メジャーモードを表示
+                                (powerline-major-mode face1 'l)
+                                (powerline-process face1)
+                                ;; マイナーモードを表示
+                                ;; (powerline-minor-modes face1 'l)
+
+                                (powerline-narrow face1 'l)
+                                (powerline-raw " " face1)
+                                (funcall separator-left face1 face2)
+
+                                ;; Gitのブランチ名などを表示
+                                (powerline-vc face2 'r)
+                                (when (bound-and-true-p nyan-mode)
+                                  (powerline-raw (list (nyan-create)) face2 'l))))
+                          
+                          (rhs (list
+                                (powerline-raw global-mode-string face2 'r)
+                                (funcall separator-right face2 face1)
+                                ;; ポイントの行を表示
+                                (powerline-raw "%4l行" face1 'l)
+                                (powerline-raw ":" face1 'l)
+                                ;; ポイントの桁を表示
+                                (powerline-raw "%3c桁" face1 'r)
+                                
+                                (funcall separator-right face1 face0)
+                                (powerline-raw " " face0)
+                                ;; 相対位置を%表示
+                                ;; (powerline-raw "%6p" face0 'r)
+                                (powerline-fill face0 0)
+                                )))
                      (concat (powerline-render lhs)
                              (powerline-fill face2 (powerline-width rhs))
                              (powerline-render rhs)))))))
@@ -279,14 +294,6 @@
                     :foreground "#444"
                     :background "#bbb"
                     :inherit 'mode-line)
-
-;;
-;; auto-complete関連
-;;
-;(require 'auto-complete)
-;(require 'ac-c-headers)
-;(global-auto-complete-mode t)
-;(setq ac-auto-start 2)
 
 ;; (with-eval-after-load 'flycheck
 ;;   (defconst flycheck-error-list-format [("File" 8 t)
@@ -481,16 +488,9 @@
    ;; エラー・警告を別バッファーに一覧表示する
    (flycheck-list-errors)
 
-   ;;
-   ;; auto-complete関連
-   ;;
-   ;(add-to-list 'ac-sources 'ac-source-c-headers)
-   ;(add-to-list 'ac-sources 'ac-source-c-header-symbols t)
-
    ;; smartpanres関連
    (smartparens-mode t)
-  
-   ;;
+
    ;; バックアップファイルを作らない
    ;;
    (make-local-variable 'make-backup-files)
