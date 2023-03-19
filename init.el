@@ -140,6 +140,7 @@
     flycheck
     powerline
     auto-save-buffers-enhanced
+    smartparens
     ))
 
 (defun all-packages-installed-p (&rest args)
