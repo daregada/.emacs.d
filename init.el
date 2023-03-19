@@ -67,6 +67,11 @@
 (global-set-key (kbd "C-c f") 'find-practice-file)
 (global-set-key (kbd "C-c 7") 'find-practice-file)
 
+;; F7キーとCtrl-C fとCtrl-C 7に、「行番号表示の切り替え」を割り当て
+(global-set-key (kbd "<f8>") 'display-line-numbers-mode)
+(global-set-key (kbd "C-c n") 'display-line-numbers-mode)
+(global-set-key (kbd "C-c 8") 'display-line-numbers-mode)
+
 ;; CentOS7のgnome-terminal用(Ctrl-Jが入力できないため)
 (define-key global-map (kbd "<f10>") 'newline-and-indent)
 (define-key lisp-interaction-mode-map (kbd "<f10>") 'eval-print-last-sexp)
