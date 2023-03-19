@@ -297,21 +297,10 @@
                     :background "#bbb"
                     :inherit 'mode-line)
 
-;; (with-eval-after-load 'flycheck
-;;   (defconst flycheck-error-list-format [("File" 8 t)
-;;                                         ("Line" 8 flycheck-error-list-entry-< :right-align t)
-;;                                         ("Col" 4 nil :right-align t)
-;;                                         ("Level" 5 flycheck-error-list-entry-level-<)
-;;                                         ("ID" 2 t)
-;;                                         ("Message (Checker)" 0 t)])
-;;                                         ;(flycheck-pos-tip-mode)
-;;   )
 
 (require 'flycheck)
-
-
-;; flycheck-error-listのID欄の横幅を6->3に
-;(aset flycheck-error-list-format 3 '("ID" 6 t))
+;; flycheck-error-listのID欄の横幅を6->2に
+(aset flycheck-error-list-format 4 '("ID" 2 t))
 
 ;; チェックに使わないチェッカーの既定値
 ;; インストールされていないclang, cppcheckと、日本語未対応のc/c++-gcc
