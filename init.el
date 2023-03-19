@@ -420,7 +420,6 @@
 (require 'smartparens-config)
 ;; {}入力後にEnterキーでインデントした空行を展開
 (sp-local-pair 'c-mode "{" nil :post-handlers '((my-create-newline-and-enter-sexp "RET")))
-
 (defun my-create-newline-and-enter-sexp (&rest _ignored)
   "Open a new brace or bracket expression, with relevant newlines and indent. "
   (newline)
@@ -428,9 +427,12 @@
   (forward-line -1)
   (indent-according-to-mode))
 
+;; smartparensの()や{}内入力時の色付けをなくす
+(setq sp-highlight-pair-overlay nil)
+
 ;; smartparensのカッコ削除用アドバイスを除去
 (advice-remove 'delete-backward-char #'sp-delete-pair-advice)
-
+;; smartparensの色付けを無効にする
 (show-smartparens-global-mode nil)
 
 ;; フック
@@ -487,8 +489,13 @@
    ;; エラー・警告を別バッファーに一覧表示する
    (flycheck-list-errors)
 
+   ;;
    ;; smartpanres関連
+   ;;
+   ;; smartparensによるカッコ組入力を行なう
    (smartparens-mode t)
+   ;; smartparensによる色付けを行わない
+   (turn-off-show-smartparens-mode)
 
    ;; バックアップファイルを作らない
    ;;
