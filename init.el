@@ -34,6 +34,7 @@
 (global-set-key [mouse-5] #'(lambda () (interactive) (scroll-up   1)))
 ;; 右クリックでリージョンをコピー
 (global-set-key [mouse-2] #'copy-region-as-kill)
+(global-set-key [mouse-3] #'copy-region-as-kill)
 
 ;;
 ;; キーカスタマイズ関連
@@ -183,7 +184,7 @@
 ;; ファイル名はwhich-func.el
 (require 'which-func)
 (set-face-foreground 'which-func "orange")
-(setq which-func-unknown "関数外")
+(setq which-func-unknown "外部")
 (setq which-func-modes '(c-mode emacs-lisp-mode))
 (which-function-mode t)
 
@@ -469,6 +470,9 @@
            brace-elseif-brace
            defun-close-semi)
          )
+   ;; コマンドによるコメントは//を使う
+   (c-toggle-comment-style -1)
+
    ;;
    ;; compile関連
    ;;
