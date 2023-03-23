@@ -1,15 +1,35 @@
-;;
+;;; init.el --- Emacs init file for EDU system (logos). -*- lexical-binding: t; -*-
+
+;;; Commentary:
+
 ;; Edu(logos)用のinit.el
 ;; ~/.emacs.dに置くこと
 
-;; Emacs 28.1のNative Compilationの警告を抑制
-(setq native-comp-async-report-warnings-errors nil
-      comp-async-report-warnings-errors nil)
+;;; Code:
 
-;; カスタムファイルの指定。カスタム設定がここに保存されるようになる
+;; 配布時にはコメントにすること
+;; (setq debug-on-error t)
+
+;; Emacs 28.1以降のNative Compilationの警告を抑制
+(unless (version< emacs-version "28.1")
+  (custom-set-variables '(native-comp-async-report-warnings-errors 'silent)))
+
+;; Emacs 28で、全角スペース"　"がnobreak spaceに追加された
+;; それらすべての特殊表示を無効にするなら以下2行を有効にする
+;; (unless (version< emacs-version "28.0")
+;;   (setq nobreak-char-display nil)
+;; 全角スペース"　"などのnonbreak spaceの下線を消すだけならこちら
+(set-face-attribute 'nobreak-space nil :underline nil)
+
+;; カスタムファイルの指定。カスタム設定が custom.el に分離されるようになる
 (setq custom-file "~/.emacs.d/custom.el")
-(if (file-exists-p (expand-file-name custom-file))
-    (load-file (expand-file-name custom-file)))
+
+;; 保存されたカスタムファイルを(わざと)読み込まない
+;; (if (file-exists-p (expand-file-name custom-file))
+;;     (load-file (expand-file-name custom-file)))
+
+;; 以下のコードで必要
+(require 'cl-lib)
 
 ;;
 ;; 起動時画面関連
@@ -25,6 +45,12 @@
 ;; 起動時にscratchバッファー先頭のメッセージを出さない
 (setq initial-scratch-message nil)
 
+;; カッコの対応を表示しない
+(show-paren-mode nil)
+
+;; 閉じカッコ入力時のハイライト表示をしない
+(setq blink-matching-paren nil)
+
 
 ;; マウスでポイントの位置変更や範囲コピー、スクロールを可能に
 (xterm-mouse-mode t)
@@ -32,7 +58,7 @@
 ;; ホイールでスクロール
 (global-set-key [mouse-4] #'(lambda () (interactive) (scroll-down 1)))
 (global-set-key [mouse-5] #'(lambda () (interactive) (scroll-up   1)))
-;; 右クリックでリージョンをコピー
+;; 右・中クリックでリージョンをコピー
 (global-set-key [mouse-2] #'copy-region-as-kill)
 (global-set-key [mouse-3] #'copy-region-as-kill)
 
@@ -41,11 +67,11 @@
 ;;
 ;; Ctrl-Vに「貼り付け」(yank)を割り当て(Windwosユーザー向け対策)
 ;; Ctrl-Vの元の機能「1画面下を表示」(scroll-up-command)はPagedownで代用可能
-(define-key global-map (kbd "C-v") 'yank)
+(global-set-key (kbd "C-v") 'yank)
 
 ;; Ctrl-Zに「元に戻す」(undo)を割り当て(Windowsユーザー向け対策)
 ;; Ctrl-Zの元の機能「一時停止」(suspend-emacs)は「M-x suspend-emacs」で代用可能
-(define-key global-map (kbd "C-z") 'undo)
+(global-set-key (kbd "C-z") 'undo)
 
 ;; F5キーとCtrl-C cとCtrl-C 5に、「編集中のプログラムを実行形式に変換する機能」を割り当て
 ;; エラーが発生した場合は、下のウィンドウがflycheck-errorsの表示に戻り
@@ -67,30 +93,50 @@
 (global-set-key (kbd "C-c f") 'find-practice-file)
 (global-set-key (kbd "C-c 7") 'find-practice-file)
 
-;; F7キーとCtrl-C fとCtrl-C 7に、「行番号表示の切り替え」を割り当て
-(global-set-key (kbd "<f8>") 'display-line-numbers-mode)
-(global-set-key (kbd "C-c n") 'display-line-numbers-mode)
-(global-set-key (kbd "C-c 8") 'display-line-numbers-mode)
+(when (fboundp 'display-line-numbers-mode)
+  ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号表示の切り替え」を割り当て
+  (global-set-key (kbd "<f8>") 'display-line-numbers-mode)
+  (global-set-key (kbd "C-c n") 'display-line-numbers-mode)
+  (global-set-key (kbd "C-c 8") 'display-line-numbers-mode)
+  ;; 行番号の見た目を変える
+  (setq-default display-line-numbers-width 5)
+  (set-face-attribute 'line-number nil
+                      :foreground "white"
+                      :background "darkgray")
+  (set-face-attribute 'line-number-current-line nil
+                      :foreground "white"
+                          :background "black")
+  )
+
+;; Insertキーの無効化。間違って押して戻せない人が多いため
+(global-set-key (kbd "<insertchar>")
+                #'(lambda ()
+                   (interactive)
+                   (message "Insertキーは無効です。上書きモードは M-x overwrite-mode で。")))
 
 ;; CentOS7のgnome-terminal用(Ctrl-Jが入力できないため)
-(define-key global-map (kbd "<f10>") 'newline-and-indent)
+(global-set-key (kbd "<f10>") 'newline-and-indent)
 (define-key lisp-interaction-mode-map (kbd "<f10>") 'eval-print-last-sexp)
 
 
 ;; ヘッダーラインの見た目を変える
-(set-face-foreground 'header-line "black")
-(set-face-background 'header-line "gray")
 (set-face-attribute 'header-line nil
+                    :foreground "black"
+                    :background "gray"
                     :inherit nil
                     :overline nil
                     :underline t)
 
+
 ;; 軽量バッファーモードの定義
 (defun lightweight-buffer-mode ()
-  "Lightweight Buffer Mode"
+  "Lightweight Buffer Mode for novice."
   (interactive)
   (setq mode-name "Lightweight Buffer")
   (setq major-mode 'lightweight-buffer-mode)
+  (if (fboundp 'show-paren-local-mode)
+      (show-paren-local-mode nil)
+    (setq-local show-paren-mode nil))
   (run-hooks 'lightweight-buffer-mode-hook))
 
 (with-current-buffer (get-buffer "*scratch*")
@@ -100,13 +146,16 @@
   (setq header-line-format
         (concat " 注意: ここにC言語のプログラムを書かないでください。"))
   (insert "\nC言語のソースファイル(拡張子.c)を作成/開いて、そこに書いてください。\n\n"))
+
 ;;
-;; 起動処理が完了後
+;; 起動処理を完了後
 ;;
 (advice-add 'command-line-1 :after #'display-notes)
 
-(defun display-notes (&rest args)
-;  "*scratch*に起動後の注意書きを表示"
+(defun display-notes (&rest _ignored)
+  ;; *scratch*に起動後の注意書きを表示
+  "Display notes for novice user."
+  
   (with-current-buffer (get-buffer "*scratch*")
     (when (not (one-window-p))
       (delete-windows-on (get-buffer "*Compile-Log*")))
@@ -121,7 +170,9 @@
     )
     (insert "起動時の処理が完了しました。\n")
     (set-buffer-modified-p nil)
-    (set-face-background 'header-line "orange")
+    (face-remap-add-relative 'header-line
+                             :background "orange")
+
 ))
 
 ;;
@@ -145,13 +196,17 @@
   '(
     flycheck
     powerline
-    auto-save-buffers-enhanced
+    real-auto-save
     smartparens
     ))
 
-(defun all-packages-installed-p (&rest args)
+(defun all-packages-installed-p (package-list)
+  "Check if all favorite packages are installed.
+
+PACKAGE-LIST: list of packages."
+  (interactive)
   (catch 'early-return-in-all-packages-installed-p
-    (dolist (package my-favorite-packages)
+    (dolist (package package-list)
       (unless (package-installed-p package)
         (throw 'early-return-in-all-packages-installed-p nil)))
     t))
@@ -159,9 +214,9 @@
 ;;
 ;; 必須パッケージがインストールされていなければ自動的にインストール
 ;;
-(unless (all-packages-installed-p)
+(unless (all-packages-installed-p my-favorite-packages)
   (with-current-buffer (get-buffer "*scratch*")
-    (insert "最初の一回だけ、各種パッケージの導入作業を行ないます。\n"
+    (insert "各種パッケージの導入作業を行ないます。\n"
             "導入作業が終わるまでしばらく時間がかかります。\n"
             "最上行がオレンジ色になるまでお待ちください。\n\n"))
   (redisplay)
@@ -177,145 +232,139 @@
 ;;
 ;; shell関連
 ;;
-(require 'shell)
-;; プロンプトは読み取り専用
-(setq comint-prompt-read-only t)
-;; プロンプトに返り値($?)を含める
-(setenv "PS1" "[\\u@\\h \\W ($(echo $?;))]\\$ ")
+(when (require 'shell)
+  ;; プロンプトは読み取り専用
+  (custom-set-variables '(comint-prompt-read-only t))
+  ;; プロンプトにコマンドの戻り値($?)を含める
+  (setenv "PS1" "[\\u@\\h \\W ($(echo $?;))]\\$ ")
+  )
 
 ;;
 ;; which-function-mode関連
 ;;
 ;; ファイル名はwhich-func.el
-(require 'which-func)
-(set-face-foreground 'which-func "orange")
-(setq which-func-unknown "外部")
-(setq which-func-modes '(c-mode emacs-lisp-mode))
-(which-function-mode t)
+(when (require 'which-func nil t)
+  (set-face-foreground 'which-func "orange")
+  (custom-set-variables '(which-func-unknown "外部"))
+  ;; which-func-modes に設定したモードのみ有効になる
+  (custom-set-variables '(which-func-modes '(c-mode emacs-lisp-mode)))
+  ;; グローバルに有効化(which-func-modes 参照)
+  (which-function-mode t)
+  )
 
 ;;
 ;; powerline関連
 ;;
-(setq powerline-display-buffer-size nil)
-(setq powerline-display-mule-info nil)
+(when (require 'powerline nil t)
+  (custom-set-variables '(powerline-display-buffer-size nil)
+                        '(powerline-display-mule-info nil))
 
-(require 'powerline)
-(defun powerline-my-theme ()
-  "Setup my mode-line."
-  (interactive)
-  (setq-default mode-line-format
-                '("%e"
-                  (:eval
-                   (let* ((active (powerline-selected-window-active))
-                          (mode-line-buffer-id (if active 'mode-line-buffer-id 'mode-line-buffer-id-inactive))
-                          (mode-line (if active 'mode-line 'mode-line-inactive))
-                          (face0 (if active 'powerline-active0 'powerline-inactive0))
-                          (face1 (if active 'powerline-active1 'powerline-inactive1))
-                          (face2 (if active 'powerline-active2 'powerline-inactive2))
-                          (separator-left (intern (format "powerline-%s-%s"
-                                                          (powerline-current-separator)
-                                                          (car powerline-default-separator-dir))))
-                          (separator-right (intern (format "powerline-%s-%s"
-                                                           (powerline-current-separator)
-                                                           (cdr powerline-default-separator-dir))))
-                          (lhs (list
-                                ;; 変更の有無
-                                (powerline-raw "[%*]" face0 'l)
-                                ;; バッファサイズ
-                                (when powerline-display-buffer-size
-                                  (powerline-buffer-size face0 'l))
-                                ;; 文字エンコーディング(UUUなど)
-                                (when powerline-display-mule-info
-                                  (powerline-raw mode-line-mule-info face0 'l))
-                                ;; バッファID (ファイル名など)
-                                (powerline-buffer-id `(mode-line-buffer-id ,face0) 'l)
-                                
-                                (when (and (boundp 'which-func-mode)
-                                           which-func-mode)
-                                  (powerline-raw which-func-format face0 'l))
-                                
-                                (powerline-raw " " face0)
-                                (funcall separator-left face0 face1)
-                                
-                                ;; メジャーモードを表示
-                                (powerline-major-mode face1 'l)
-                                (powerline-process face1)
-                                ;; マイナーモードを表示
-                                ;; (powerline-minor-modes face1 'l)
+  (defun powerline-my-theme ()
+    "Setup my mode-line."
+    (interactive)
+    (setq-default
+     mode-line-format
+     '("%e"
+       (:eval
+        (let* ((active (powerline-selected-window-active))
+               (mode-line-buffer-id (if active 'mode-line-buffer-id 'mode-line-buffer-id-inactive))
+               (mode-line (if active 'mode-line 'mode-line-inactive))
+               (face0 (if active 'powerline-active0 'powerline-inactive0))
+               (face1 (if active 'powerline-active1 'powerline-inactive1))
+               (face2 (if active 'powerline-active2 'powerline-inactive2))
+               (separator-left (intern (format "powerline-%s-%s"
+                                               (powerline-current-separator)
+                                               (car powerline-default-separator-dir))))
+               (separator-right (intern (format "powerline-%s-%s"
+                                                (powerline-current-separator)
+                                                (cdr powerline-default-separator-dir))))
+               (lhs (list
+                     ;; 変更の有無
+                     (powerline-raw "[%*]" face0 'l)
+                     ;; バッファサイズ
+                     (when powerline-display-buffer-size
+                       (powerline-buffer-size face0 'l))
+                     ;; 文字エンコーディング(UUUなど)
+                     (when powerline-display-mule-info
+                       (powerline-raw mode-line-mule-info face0 'l))
+                     ;; バッファID (ファイル名など)
+                     (powerline-buffer-id `(mode-line-buffer-id ,face0) 'l)
+                     (when (and (boundp 'which-func-mode)
+                                which-func-mode)
+                       (powerline-raw which-func-format face0 'l))
 
-                                (powerline-narrow face1 'l)
-                                (powerline-raw " " face1)
-                                (funcall separator-left face1 face2)
+                     (powerline-raw " " face0)
+                     (funcall separator-left face0 face1)
 
-                                ;; Gitのブランチ名などを表示
-                                (powerline-vc face2 'r)
-                                (when (bound-and-true-p nyan-mode)
-                                  (powerline-raw (list (nyan-create)) face2 'l))))
-                          
-                          (rhs (list
-                                (powerline-raw global-mode-string face2 'r)
-                                (funcall separator-right face2 face1)
-                                ;; ポイントの行を表示
-                                (powerline-raw "%4l行" face1 'l)
-                                (powerline-raw ":" face1 'l)
-                                ;; ポイントの桁を表示
-                                (powerline-raw "%3c桁" face1 'r)
-                                
-                                (funcall separator-right face1 face0)
-                                (powerline-raw " " face0)
-                                ;; 相対位置を%表示
-                                ;; (powerline-raw "%6p" face0 'r)
-                                (powerline-fill face0 0)
-                                )))
-                     (concat (powerline-render lhs)
-                             (powerline-fill face2 (powerline-width rhs))
-                             (powerline-render rhs)))))))
+                     ;; メジャーモードを表示
+                     (powerline-major-mode face1 'l)
+                     (powerline-process face1)
+                     ;; マイナーモードを表示
+                     ;; (powerline-minor-modes face1 'l)
 
-(powerline-my-theme)
-(set-face-attribute 'mode-line nil
-                    :foreground "#fff"
-                    :background "#000000"
-                    :box nil)
+                     (powerline-narrow face1 'l)
+                     (powerline-raw " " face1)
+                     (funcall separator-left face1 face2)
 
-(set-face-attribute 'powerline-active1 nil
-                    :foreground "#fff"
-                    :background "#6699FF"
-                    :inherit 'mode-line)
+                     ;; Gitのブランチ名などを表示
+                     (powerline-vc face2 'r)
+                     (when (bound-and-true-p nyan-mode)
+                       (powerline-raw (list (nyan-create)) face2 'l))))
 
-(set-face-attribute 'powerline-active2 nil
-                    :foreground "#fff"
-                    :background "#3366FF"
-                    :inherit 'mode-line)
+               (rhs (list
+                     (powerline-raw global-mode-string face2 'r)
+                     (funcall separator-right face2 face1)
+                     ;; ポイントの行を表示
+                     (powerline-raw "%4l行" face1 'l)
+                     (powerline-raw ":" face1 'l)
+                     ;; ポイントの桁を表示
+                     (powerline-raw "%3c桁" face1 'r)
 
-(set-face-attribute 'mode-line-inactive nil
-                    :foreground "#444"
-                    :background "#ddd"
-                    :box nil)
+                     (funcall separator-right face1 face0)
+                     (powerline-raw " " face0)
+                     ;; 相対位置を%表示
+                     ;; (powerline-raw "%6p" face0 'r)
+                     (powerline-fill face0 0)
+                     )))
+          (concat (powerline-render lhs)
+                  (powerline-fill face2 (powerline-width rhs))
+                  (powerline-render rhs)))))))
 
-(set-face-attribute 'powerline-inactive1 nil
-                    :foreground "#444"
-                    :background "#ccc"
-                    :inherit 'mode-line)
+  (set-face-attribute 'mode-line           nil
+                      :foreground "#fff" :background "#000000" :box     nil)
+  (set-face-attribute 'powerline-active1   nil
+                      :foreground "#fff" :background "#6699FF" :inherit 'mode-line)
+  (set-face-attribute 'powerline-active2   nil
+                      :foreground "#fff" :background "#3366FF" :inherit 'mode-line)
+  (set-face-attribute 'mode-line-inactive  nil
+                      :foreground "#444" :background "#ddd"    :box     nil)
+  (set-face-attribute 'powerline-inactive1 nil
+                      :foreground "#444" :background "#ccc"    :inherit 'mode-line)
+  (set-face-attribute 'powerline-inactive2 nil
+                      :foreground "#444" :background "#bbb"    :inherit 'mode-line)
 
-(set-face-attribute 'powerline-inactive2 nil
-                    :foreground "#444"
-                    :background "#bbb"
-                    :inherit 'mode-line)
+  (when (fboundp 'powerline-my-theme)
+    (powerline-my-theme)))
 
 
+;;
+;; flycheck関連
+;;
 (require 'flycheck)
-;; flycheck-error-listのID欄の横幅を6->2に
+;; flycheck-error-listのID欄の横幅を6->3に
 (aset flycheck-error-list-format 4 '("ID" 3 t))
 
 ;; チェックに使わないチェッカーの既定値
-;; インストールされていないclang, cppcheckと、日本語未対応のc/c++-gcc
+;; インストールされていない clang, cppcheck
+;; 日本語未対応の c/c++-gcc, デバッグ時に邪魔な emacs-lisp-checkdoc
 (setq-default flycheck-disabled-checkers '(c/c++-clang
                                            c/c++-cppcheck
-                                           c/c++-gcc))
+					   c/c++-gcc
+                                           emacs-lisp-checkdoc))
 
 ;; flycheckを日本語化されたgccのエラーメッセージに対応させる
 ;; オリジナル: 'https://futurismo.biz/archives/2992'
-;; 最新のfrycheck.elを参照して、エラーパターンを修正
+;; 最新のflycheck.elを参照して、エラーパターンを修正
 ;; note(備考)とfatal error(致命的エラー)の対応を追加
 ;; 英語のエラーメッセージにも対応できるようにした
 (defmacro flycheck-define-clike-checker (name command modes)
@@ -327,53 +376,100 @@
        line-start (or "<stdin>" (file-name))
        ":" line (optional ":" column)
        ": " (or "note" "備考") ": " (message) line-end)
+      
       (warning
        line-start (or "<stdin>" (file-name))
        ":" line (optional ":" column)
        ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
        (optional "[" (id (one-or-more not-newline)) "]") line-end)
+      
+      ;; 以下のパターンはリンカの出すエラーに対応しない
+      ;; (error
+      ;;  line-start (or "<stdin>" (file-name))
+      ;;  ":" line (optional ":" column)
+      ;;  ": " (or "fatal error" "致命的エラー" "error" "エラー") ": " (message) line-end))
+
+      ;; リンカの出すエラーに無理矢理対応
       (error
-       line-start (or "<stdin>" (file-name))
-       ":" line (optional ":" column)
-       ": " (or "fatal error" "致命的エラー" "error" "エラー") ": " (message) line-end))
-     :modes ',modes))
+       line-start (or "<stdin>" (file-name)) ":"
+       (or
+        ;; 通常のエラーメッセージ
+        (seq line (optional ":" column)
+             ": " (or "fatal error" "致命的エラー" "error" "エラー") ": " (message) line-end)
+        ;; リンカのエラーメッセージ
+        ;; line に数値をマッチさせないと flycheck-error-list に表示されない
+        (seq "(.text+" line (one-or-more (not (any ")"))) "): "
+             (message (one-or-more (not (any "\n")))) "\n"
+             "collect2: " (or "error" "エラー") ": " (one-or-more (not (any "\n"))) line-end)
+        )))
+     :modes ',modes)
+  
+     )
 
 ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
-(flycheck-define-clike-checker c-gcc-ja
-                               ("gcc" "-fsyntax-only" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11")
-                               c-mode)
+;; gccは -fsyntax-only ではチェックできないエラー・警告がある
+;; -O で初期化されていない自動変数をチェック可能になる
+;; -S でアセンブリファイルまで作成すると、いくつかのエラー・警告がチェック可能になる
+;; -o /dev/null でファイルは保存しないようにする
+(flycheck-define-clike-checker
+ c-gcc-ja
+ ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
+ c-mode)
 
-;; チェッカーとして登録
+;; C言語用の日本語対応エラーチェッカー(c-gcc-ja-with-ld)を定義
+;; リンカまで実行しないとチェックできないエラーがある
+;; -o /dev/null でファイルは保存しないようにする
+;; コストを考えて、コンパイル時に c-gcc-ja では検出できなかったときだけ切り替えて使う
+(flycheck-define-clike-checker
+ c-gcc-ja-with-ld
+ ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-o" null-device)
+ c-mode)
+
+;; c-gcc-jaのみチェッカーとして登録
 (add-to-list 'flycheck-checkers 'c-gcc-ja)
-
-;; C++言語用の日本語対応エラーチェッカーを定義
-;; (flycheck-define-clike-checker c++-g++-ja
-;;                    ("g++" "-fsyntax-only" "-Wall" "-Wextra" "-std=c++11")
-;;                    c++-mode)
-;; (add-to-list 'flycheck-checkers 'c++-g++-ja)
 
 ;; エラーを表示する関数をエコー領域を使わないものに変更
 (setq flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list)
 
-;; モード切り替え時と保存時に自動チェックする
-(setq flycheck-check-syntax-automatically '(
-                                            mode-enabled
-                                            save
-                                            new-line ; auto-completeと併用するときはコメントにすること
-                                            ;idle-change
-                                            ))
+;; 自動チェックするトリガーを指定
+(setq flycheck-check-syntax-automatically
+      '(
+        mode-enabled
+        save                            ; 自動保存にも連動
+        new-line                        ; auto-completeと併用するときは無効にすること
+        ;; idle-change
+        ))
 
 ;; エラー・警告・備考のフェイス設定
 (set-face-foreground 'flycheck-error "white")
 (set-face-background 'flycheck-error "red")
 (set-face-attribute 'flycheck-error nil :underline nil :weight 'bold)
+
 (set-face-foreground 'flycheck-warning "black")
 (set-face-background 'flycheck-warning "orange")
 (set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
+
 (set-face-foreground 'flycheck-info "lightblue")
 
-;; 前回のコンパイルの結果
-(setq has-error-or-warnings nil)
+;; 前回のコンパイルの結果を保存する
+(defvar has-error-or-warnings nil)
+
+;; エラーチェック直後に呼ばれるフック
+(add-hook 'flycheck-after-syntax-check-hook
+          (lambda  ()
+            ;; バッファが隠れている可能性もあるので必要
+            (flycheck-list-errors)
+            ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
+            (let ((header-line-background (if (flycheck-has-current-errors-p)
+                                              "orange" "lightgreen")))
+              (with-current-buffer (get-buffer "*Flycheck errors*")
+                ;; バッファが*Flycheck errors*に切り替わったので
+                ;; flycheck-has-current-errors-pはnilになることに注意
+                (face-remap-add-relative 'header-line
+                                         :background header-line-background))
+              )
+            )
+          )
 
 ;;
 ;; display-buffer-alist関連
@@ -416,24 +512,37 @@
 (setq-default c-default-style "k&r"
               c-basic-offset 4)
 
-;(require 'smartparens)
-(require 'smartparens-config)
-;; {}入力後にEnterキーでインデントした空行を展開
-(sp-local-pair 'c-mode "{" nil :post-handlers '((my-create-newline-and-enter-sexp "RET")))
-(defun my-create-newline-and-enter-sexp (&rest _ignored)
-  "Open a new brace or bracket expression, with relevant newlines and indent. "
-  (newline)
-  (indent-according-to-mode)
-  (forward-line -1)
-  (indent-according-to-mode))
+(when (require 'smartparens nil t)
+  (require 'smartparens-config)
 
-;; smartparensの()や{}内入力時の色付けをなくす
-(setq sp-highlight-pair-overlay nil)
+  ;; {}入力後にEnterキーでインデントした空行を展開
+  (declare-function sp-local-pair "smartparens" (p1 p2 p3 p4 p5))
+  (sp-local-pair 'c-mode "{" nil :post-handlers '((my-create-newline-and-enter-sexp "RET")))
 
-;; smartparensのカッコ削除用アドバイスを除去
-(advice-remove 'delete-backward-char #'sp-delete-pair-advice)
-;; smartparensの色付けを無効にする
-(show-smartparens-global-mode nil)
+  (defun my-create-newline-and-enter-sexp (&rest _ignored)
+    "Open a new brace or bracket expression, with relevant newlines and indent. "
+    (newline)
+    (indent-according-to-mode)
+    (forward-line -1)
+    (indent-according-to-mode))
+
+  ;; smartparensの()や{}内入力時の色付けをなくす
+  (setq-default sp-highlight-pair-overlay nil)
+
+  ;; smartparensのparedit風操作のキー割り当て
+  (define-key smartparens-mode-map (kbd "C-<right>") 'sp-forward-slurp-sexp)
+  (define-key smartparens-mode-map (kbd "C-<left>") 'sp-forward-barf-sexp)
+  (define-key smartparens-mode-map (kbd "M-r") 'sp-raise-sexp)
+  (define-key smartparens-mode-map (kbd "M-s") 'sp-splice-sexp)
+  (define-key smartparens-mode-map (kbd "C-<up>") 'sp-splice-sexp-killing-backward)
+
+  ;; smartparensのカッコ削除用アドバイスを除去
+  (declare-function sp-delete-pair-advice "smartparens" nil)
+  (advice-remove 'delete-backward-char #'sp-delete-pair-advice)
+  ;; smartparensの色付けを無効にする
+  (show-smartparens-global-mode nil)
+
+  )
 
 ;; フック
 (add-hook
@@ -442,13 +551,26 @@
    ;;
    ;; show-paren-mode関連
    ;;
-   ;; 対応するカッコの強調をc-modeに限定
-   (make-variable-buffer-local 'show-paren-mode)
-   ;; 対応するカッコの強調を行なう
-   (show-paren-mode 1)
+   ;; c-mode限定で対応するカッコの強調を行なう
+   (if (fboundp 'show-paren-local-mode)
+       (show-paren-local-mode t)
+     (setq-local show-paren-mode t))
+   
    ;; 対応するカッコのみを強調
-   (setq show-paren-style 'parenthesis)
+   (setq-local show-paren-style 'parenthesis)
 
+   ;; 全角スペース"　"などの外見を変更
+   (face-remap-add-relative 'nobreak-space
+                    :foreground "black"
+                    :background "pink"
+                    :underline  nil)
+
+   ;;
+   ;; display-line-numbers-mode関連
+   ;;
+   (when (fboundp 'display-line-numbers-mode)
+     (display-line-numbers-mode t))
+   
    ;;
    ;; c-mode (cc-mode)関連
    ;;
@@ -472,25 +594,37 @@
    ;;
    ;; compile関連
    ;;
-   ;; 実行形式への変換に使うコマンドの確認(最下行に表示してEnterキー)をしない
-   (setq compilation-read-command nil)
-   ;; 実行形式への変換前にソースファイルを自動保存する
-   (setq compilation-ask-about-save nil)
-   ;; 実行形式への変換後、最初のエラーにポイント(カーソル)を移動させる
-   (setq compilation-auto-jump-to-first-error t)
-   ;; 実行形式への変換後、エラー(と思われる)範囲をハイライト表示する秒数 
-   (setq next-error-highlight 5)
+   (custom-set-variables
+    ;; 実行形式への変換に使うコマンドの確認(最下行に表示してEnterキー)をしない
+    '(compilation-read-command nil)
+    ;; 実行形式への変換前にソースファイルを(質問なしで)自動保存する
+    '(compilation-ask-about-save nil)
+    ;; 実行形式への変換後、最初のエラーにポイント(カーソル)を移動させる
+    '(compilation-auto-jump-to-first-error t)
+    )
+
+   ;; 実行形式への変換後、エラー(と思われる)範囲をハイライト表示する秒数
+   ;; flycheck が同様の処理をするので設定しない
+   ;; (setq next-error-highlight 5)
+
+   ;;
+   ;; real-auto-save関連
+   ;;
+   (when (require 'real-auto-save nil t)
+     (real-auto-save-mode)
+     (custom-set-variables '(real-auto-save-interval 2))
+     )
 
    ;;
    ;; flycheck関連
    ;;
    ;; flycheckによる文法チェックを行なう
-   (flycheck-mode 1)
+   (flycheck-mode t)
    ;; エラー・警告を別バッファーに一覧表示する
    (flycheck-list-errors)
 
    ;;
-   ;; smartpanres関連
+   ;; smartparens関連
    ;;
    ;; smartparensによるカッコ組入力を行なう
    (smartparens-mode t)
@@ -499,64 +633,58 @@
 
    ;; バックアップファイルを作らない
    ;;
-   (make-local-variable 'make-backup-files)
-   (setq make-backup-files nil)
+   (setq-local make-backup-files nil)
    ))
 
 ;;
 ;; autoinsert関連
 ;;
-(require 'autoinsert)
-;; ファイルを新規作成する際にテンプレートを利用する
-(add-hook 'find-file-not-found-hooks 'auto-insert)
+(when (require 'autoinsert nil t)
+  ;; ファイルを新規作成する際にテンプレートを利用する
+  (add-to-list 'find-file-not-found-functions
+               #'(lambda ()
+                   (auto-insert)
+                   ;; auto-insert 後に変更フラグを付ける
+                   (set-buffer-modified-p t)
+                   ))
 
-;; テンプレートを使うかどうかの質問をしない(常に使う)
-(setq auto-insert-query nil)
+  ;; テンプレートを使うかどうかの質問をしない(常に使う)
+  (custom-set-variables '(auto-insert-query nil))
 
-;; テンプレートのリストをクリア
-(setq auto-insert-alist nil)
+  ;; テンプレートのリストをクリア
+  (custom-set-variables '(auto-insert-alist nil))
 
-;; C言語用テンプレートを設定
-(define-auto-insert
-  '("\\.c$" . "C template")
-  [("C template: "
-    (c-mode)			; テンプレート挿入時はc-modeになっていないため必要
-    "#include <stdio.h>" \n \n	; 先頭行と次行(空行)を挿入
-    "int main(void)" \n	; mainの引数はvoidにする
-    "{" > \n			; {の位置を行頭にするには後ろに>を入れてインデント
-    > _ \n			; インデント後にポインターを置く
-    "return 0;" \n		; 前行と同じインデントでreturn文を置く
-    "}" > \n )])		; {と位置を合わせるには後ろに>を入れてインデント
+  ;; C言語用テンプレートを設定
+  (define-auto-insert
+    '("\\.c$" . "C template")
+    [("C template: "
+      (c-mode)			; テンプレート挿入時はc-modeになっていないため必要
+      "#include <stdio.h>" \n \n	; 先頭行と次行(空行)を挿入
+      "int main(void)" \n	; mainの引数はvoidにする
+      "{" > \n			; {の位置を行頭にするには後ろに>を入れてインデント
+      > _ \n			; インデント後にポインターを置く
+      "return 0;" \n		; 前行と同じインデントでreturn文を置く
+      "}" > \n )])		; {と位置を合わせるには後ろに>を入れてインデント
 
-;; .bash_profile用テンプレートを設定
-(define-auto-insert
-  '("/\\.bash_profile$" . "Bash profile template")
-  [("Bash profile template: "
-    "export LANG=ja_JP.UTF-8\n"
-    "export PATH=/snap/emacs/current/usr/bin:$PATH\n"
-    "source ~/.bashrc\n"
-    )])
+  ;; .bash_profile用テンプレートを設定
+  (define-auto-insert
+    '("/\\.bash_profile$" . "Bash profile template")
+    [("Bash profile template: "
+      "export LANG=ja_JP.UTF-8\n"
+      "export PATH=/snap/emacs/current/usr/bin:$PATH\n"
+      "source ~/.bashrc\n"
+      )])
 
-;;
-;; auto-save-buffers-enhanced
-;;
-(require 'auto-save-buffers-enhanced)
-;;; 2秒後に保存
-(setq auto-save-buffers-enhanced-interval 2)
-;;; Cソースファイルのみ自動保存を有効にする
-(setq auto-save-buffers-enhanced-include-regexps '(".+\\.c$"))
-;;; Wroteのメッセージを抑制
-(setq auto-save-buffers-enhanced-quiet-save-p t)
-(auto-save-buffers-enhanced t)
-
+  )
 
 ;; 
 ;; 自作コマンドと関数
 ;; 
-(require 'cl-lib)
 
-;; 直前にsave-and-compileで実行形式に変換されたプログラムのコマンド名(先頭に"./"付き)
+;; 直前に save-and-compile で実行形式に変換されたプログラムのコマンド名(先頭に"./"付き)
 (defvar my-command "")
+;; 直前に save-and-compile で実行形式に変換されたプログラムのバッファ
+(defvar my-compiled-source-buffer nil)
 
 ;;
 ;; 編集中のC言語のソースファイルを実行形式に変換する
@@ -572,16 +700,22 @@
            (shell-and-insert))
          )
         (t
+         ;; コンパイル対象のバッファ名
+         (setq my-compiled-source-buffer (buffer-name))
+         
          ;; ファイル全体のインデントを整える
          (indent-whole-file)
 
-         ;; テンプレートを読んだ直後は変更フラグなしのため、問答無用で保存
+         ;; (変更されていれば)問答無用で保存
          (save-buffer)
 
          ;; flycheckによるエラーチェックの結果を更新
          (when (flycheck-mode)
+           ;; ウィンドウ分割していなくても、チェック後に自動分割される
+           ;; flycheck-after-syntax-check-hook を参照
            (flycheck-buffer)
-           (sit-for 0.5)
+           (while (flycheck-running-p)
+             (sit-for 0.125))
            )
 
          (let
@@ -591,15 +725,16 @@
            (setq my-command (format "./%s" file-base))
            ;; コンパイルコマンドにファイル名などを埋め込む
            (set (make-local-variable 'compile-command)
-                (format "gcc -Wall -Wextra -std=gnu11 -lm -o%s %s"
+                (format "gcc -Wall -Wextra -std=gnu11 -lm -O -o%s %s"
                         file-base
                         file-name
                         ))
            ;; コンパイルを実行。画面が自動分割されて変換結果が表示される
-           ;; flycheck-errors-listに切り替わる
+           ;; コンパイル完了後はswitch-compilation-bufferが呼び出されてflycheck-errors-listに切り替わる
            (compile (eval compile-command))
 
-           )))) 
+           
+           ))))
 
 ;; 
 ;; 別ウィンドウ(または別バッファー)の選択
@@ -611,47 +746,42 @@
       (switch-to-buffer (other-buffer))
     ;; shellバッファーから別のウィンドウに移動するときはflycheck-errorsに切り替える
     (when (string= (buffer-name) "*shell*")
-      (switch-buffer-to-flycheck-errors "*shell*")))
-  ;; ウィンドウが分割されていれば、別ウィンドウを順に選択する
-  (if (and (not (flycheck-errors-has-list-p))
-           (string= (buffer-name) "*Flycheck errors*")
-           (eq has-error-or-warnings t))
-      (progn
-        (set-window-buffer
-         (get-buffer-window (current-buffer))
-         (get-buffer "*compilation*"))
-        )
-    (when (string= (buffer-name) "*compilation*")
-      (switch-buffer-to-flycheck-errors "*compilation*"))
-    (other-window 1)))
+      (switch-buffer-to-flycheck-errors "*shell*"))
+    ;; ウィンドウが分割されていれば、別ウィンドウを選択する
+    (other-window 1))
+  
+  ;; (if (and (not (flycheck-errors-has-list-p))
+  ;;          (string= (buffer-name) "*Flycheck errors*")
+  ;;          (eq has-error-or-warnings t))
+  ;;     (progn
+  ;;       (set-window-buffer
+  ;;        (get-buffer-window (current-buffer))
+  ;;        (get-buffer "*compilation*"))
+  ;;       )
+  ;;   (when (string= (buffer-name) "*compilation*")
+  ;;     (switch-buffer-to-flycheck-errors "*compilation*"))
+  ;;   (other-window 1))
+  )
 
 ;;
-;; マウス操作で*shell*からソースコードに切り替えた時に*Flycheck errors*を表示
+;; マウス操作で*shell*や*compilation*バッファからソースコードに切り替えた時に*Flycheck errors*を表示
 ;;
-(advice-add 'select-window :before #'check-select-window)
+(advice-add 'mouse-set-point :before #'mouse-set-point-before)
+(advice-add 'mouse-set-point :after #'mouse-set-point-after)
 
-(defun check-select-window (&rest args)
-  (let ((prev-buf (window-buffer (next-window (selected-window) 'none))))
-    (when (and (string= (buffer-name prev-buf) "*shell*")
+(defvar my-prev-buffer-name)
+
+(defun mouse-set-point-before (&rest _ignored)
+  (setq my-prev-buffer-name (buffer-name)))
+
+(defun mouse-set-point-after (&rest _ignored)
+  (unless (string= my-prev-buffer-name (buffer-name))
+    (message (concat "mouse-set-pointアドバイス実行中: " my-prev-buffer-name "->" (buffer-name)))
+    (when (and (or (string= my-prev-buffer-name "*shell*")
+                   (string= my-prev-buffer-name "*compilation*"))
                (and (not (eq buffer-file-name nil))
-                    (string= (file-name-extension buffer-file-name t) ".c"))
-               )
-      ;; (message (concat "アドバイス実行中:"
-      ;;                  (buffer-name prev-buf)
-      ;;                  "->"
-      ;;                  (buffer-name)))
-      (set-window-buffer (next-window (selected-window) 'none) "*Flycheck errors*")
-      )))
-
-;; next-line実行時に自動保存してflycheckを動かす
-;(advice-add 'next-line :after #'next-line--flycheck-buffer)
-
-;; (defun next-line--flycheck-buffer (&rest args)
-;;   (when (and (not (eq buffer-file-name nil))
-;;              (string= (file-name-extension buffer-file-name t) ".c"))
-;;     (when (buffer-modified-p)
-;;       (save-buffer))
-;;     ))
+                    (string= (file-name-extension buffer-file-name t) ".c")))
+      (switch-buffer-to-flycheck-errors my-prev-buffer-name))))
 
 ;;
 ;; 現在のポイントにコマンド名を挿入
@@ -727,6 +857,7 @@
 ;; コンパイル結果のバッファをflycheck-errorsに切り替える
 ;;
 (defun switch-buffer-to-flycheck-errors (buf)
+  (unless ())
   (cond ((get-buffer "*Flycheck errors*")
          (set-window-buffer
           (get-buffer-window buf)
@@ -758,9 +889,22 @@
          (message "エラー・警告を修正してください")
          ;; flycheck-errorsにリストがあればflycheck-errorsに切り換える
          (if (flycheck-errors-has-list-p)
-             (switch-buffer-to-flycheck-errors "*compilation*")))
+             (switch-buffer-to-flycheck-errors "*compilation*")
+           ;; flycheck-errorにリストがないなら、checkerをld付きのものに変更
+           (add-to-list 'flycheck-checkers 'c-gcc-ja-with-ld)
+           (delete 'c-gcc-ja flycheck-checkers)
+             
+           (switch-buffer-to-flycheck-errors "*compilation*")
+           (with-current-buffer my-compiled-source-buffer
+               (flycheck-buffer))
+             )
+         )
         (t
          (setq has-error-or-warnings nil)
+         ;; flycheck-errorのcheckerをldなしのものに戻す
+         (add-to-list 'flycheck-checkers 'c-gcc-ja)
+         (delete 'c-gcc-ja-with-ld flycheck-checkers)
+         
          (message "変換成功。実行できます")
          (shell-and-insert)
          )))
@@ -785,15 +929,6 @@
     (find-file file-name)
     ))
 
-;; emacs-lisp-mode用の設定
-(add-hook 'emacs-lisp-mode-hook
-          #'(lambda ()
-              (when (require 'paredit nil t)
-                (enable-paredit-mode))
-              (show-paren-mode)
-	      (setq indent-tabs-mode nil)
-              ))
-
 ;;
 ;; 現在のファイル全体をインデントする
 ;;
@@ -802,10 +937,51 @@
   (when (not (eq buffer-file-name nil))
     ;; ファイルバッファーにいる
     (let ((file-ext (file-name-extension buffer-file-name t))
-          (file-base (shell-quote-argument (file-name-base buffer-file-name)))
           )
       (when (string= file-ext ".c")
         ;; Cのソースファイルのバッファーにいる
         (indent-region (point-min) (point-max))
         ))))
 
+;; emacs-lisp-mode用の設定
+(add-hook 'emacs-lisp-mode-hook
+          #'(lambda ()
+              (when (require 'smartparens nil t)
+                (smartparens-strict-mode t)
+                (turn-off-show-smartparens-mode))
+              (when (require 'swiper nil t)
+                (global-set-key (kbd "C-s") 'swiper))
+              (when (require 'counsel nil t)
+                (global-set-key (kbd  "M-x") 'counsel-M-x))
+              (when (require 'highlight-defined)
+                (highlight-defined-mode t))
+              (when (require 'paren nil t)
+                (if (fboundp 'show-paren-local-mode)
+                    (show-paren-local-mode t)
+                  (setq-local show-paren-mode t))
+                
+                (setq-local show-paren-style 'expression)
+                (setq-local show-paren-when-point-inside-paren t)
+                ;; (setq-local show-paren-when-point-in-periphery t)
+                (face-remap-add-relative 'show-paren-match
+                                         :weight 'bold
+                                         :background "wheat"
+                                         )
+                )
+              (when (require 'bm nil t)
+                (global-set-key (kbd "<f2>") 'bm-next)
+                (global-set-key (kbd "S-<f2>") 'bm-toggle)
+                (set-face-attribute 'bm-face nil
+                                    :foreground "black"
+                                    :background "#c0dcc0")
+                )
+
+              ;; 全角スペース"　"などの外見を変更
+              (face-remap-add-relative 'nobreak-space
+                                       :foreground "black"
+                                       :background "pink"
+                                       :underline  nil)
+
+	      (setq indent-tabs-mode nil)
+              )
+          )
