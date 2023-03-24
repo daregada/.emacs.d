@@ -953,7 +953,7 @@ PACKAGE-LIST: list of packages."
                 (global-set-key (kbd "C-s") 'swiper))
               (when (require 'counsel nil t)
                 (global-set-key (kbd  "M-x") 'counsel-M-x))
-              (when (require 'highlight-defined)
+              (when (require 'highlight-defined nil t)
                 (highlight-defined-mode t))
               (when (require 'paren nil t)
                 (if (fboundp 'show-paren-local-mode)
