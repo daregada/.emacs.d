@@ -14,6 +14,11 @@
 (unless (version< emacs-version "28.1")
   (custom-set-variables '(native-comp-async-report-warnings-errors 'silent)))
 
+;; Emacs 28で、全角スペースなど"　"がnobreak-spaceに追加された
+;; それらすべての特殊表示を無効にする
+(unless (version< emacs-version "28.0")
+  (setq nobreak-char-display nil))
+
 ;; カスタムファイルの指定。カスタム設定が custom.el に分離されるようになる
 (setq custom-file "~/.emacs.d/custom.el")
 
@@ -56,42 +61,36 @@
 (global-set-key [mouse-3] #'copy-region-as-kill)
 
 
-;; Emacs 28で、全角スペースなど"　"がnobreak-spaceに追加された
-;;;; それらすべての特殊表示を無効にするなら以下2行を有効にする
-;;;; (unless (version< emacs-version "28.0")
-;;;;   (setq nobreak-char-display nil))
+;;
+;; whitespace関連
+;;
+(when (require 'whitespace nil t)
+  ;; nobreak-spaceとtabの外見をwhitespaceで変更する
+  (setq whitespace-style '(face           ; faceで可視化
+                           ;; trailing    ; 行末
+                           tabs           ; タブ
+                           spaces         ; スペース
+                           ;; empty       ; 先頭/末尾の空行
+                           ;; space-mark  ; 空白表示のマッピング
+                           ;; tab-mark    ; タブ表示のマッピング
+                           ))
+  ;; nobreak-spaceのみ対象とする
+  (setq whitespace-space-regexp "\\([\u00a0\u1680\u2001-\u200a\u202f\u205f\u3000]+\\)")
 
-;; nobreak-spaceの外見を変更する
-(if (not (version< emacs-version "28.0"))
-    ;; Emacs 28以上では nobreak-space の下線を消す
-    ;; 特定モードでのみ nobreak-space の背景色などを変更
-    (set-face-attribute 'nobreak-space nil :underline nil :foreground nil)
-  ;; Emacs 28未満ではwhitespaceを利用して nobreak-space の外見を変更
-  (when (require 'whitespace nil t)
-    (setq whitespace-style '(face           ; faceで可視化
-                             ;; trailing    ; 行末
-                             tabs           ; タブ
-                             spaces         ; スペース
-                             ;; empty       ; 先頭/末尾の空行
-                             ;; space-mark  ; 空白表示のマッピング
-                             ;; tab-mark    ; タブ表示のマッピング
-                             ))
-    (setq whitespace-space-regexp "\\([\u00a0\u1680\u2001-\u200a\u202f\u205f\u3000]+\\)")
+  ;; 色付けしたい空白系文字のface
+  (set-face-attribute 'whitespace-space nil
+                      :background "pink"
+                      :foreground "black"
+                      :weight 'bold)
 
-    ;; 色付けしたい空白系文字のface
-    (set-face-attribute 'whitespace-space nil
-                        :background "pink"
-                        :foreground "black"
-                        :weight 'bold)
-
-    ;; 色付けしたいタブ系文字のface
-    (set-face-attribute 'whitespace-tab nil
-                        :background "lightgray"
-                        :foreground "red"
-                        :underline t)
-    ;; 　   　 sample 		
-    )
+  ;; 色付けしたいタブ系文字のface
+  (set-face-attribute 'whitespace-tab nil
+                      :background "lightgray"
+                      :foreground "red"
+                      :underline t)
+  ;; 　   　 sample 		
   )
+
 
 
 ;;
@@ -665,14 +664,8 @@ PACKAGE-LIST: list of packages."
    (turn-off-show-smartparens-mode)
 
    ;; 全角スペース"　"などの外見を変更
-   (if (not (version< emacs-version "28.0"))
-       (face-remap-add-relative 'nobreak-space
-                                :foreground "black"
-                                :background "pink"
-                                :underline  nil)
-     (when (fboundp 'whitespace-mode)
-       (whitespace-mode t))
-     )
+   (when (fboundp 'whitespace-mode)
+     (whitespace-mode t))
 
    ;; バックアップファイルを作らない
    ;;
@@ -1020,14 +1013,8 @@ PACKAGE-LIST: list of packages."
                 )
 
               ;; 全角スペース"　"などの外見を変更
-              (if (not (version< emacs-version "28.0"))
-                  (face-remap-add-relative 'nobreak-space
-                                           :foreground "black"
-                                           :background "pink"
-                                           :underline  nil)
-                (when (fboundp 'whitespace-mode)
-                  (whitespace-mode t))
-                )
+              (when (fboundp 'whitespace-mode)
+                (whitespace-mode t))
 
               (setq indent-tabs-mode nil)
               )
