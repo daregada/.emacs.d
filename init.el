@@ -506,6 +506,18 @@ VERBOSE: insert messages to *scratch* if non-nil.
         ;; idle-change
         ))
 
+(advice-add 'next-line :after #'save-current-c-mode-buffer-if-modified)
+(advice-add 'previous-line :after #'save-current-c-mode-buffer-if-modified)
+
+;; カレントバッファーのCソースコードが変更されていたら保存する
+(defun save-current-c-mode-buffer-if-modified (&rest _ingored)
+  "Immediately save current buffer if modified."
+  (when (and (buffer-modified-p)
+             (eq major-mode 'c-mode)) 
+    (message "saved (next-line-after)")
+    (save-buffer)
+    ))
+
 ;; エラー・警告・備考のフェイス設定
 (set-face-foreground 'flycheck-error "white")
 (set-face-background 'flycheck-error "red")
