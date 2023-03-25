@@ -434,14 +434,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;; 日本語未対応の c/c++-gcc, デバッグ時に邪魔な emacs-lisp-checkdoc
 (setq-default flycheck-disabled-checkers '(c/c++-clang
                                            c/c++-cppcheck
-					   c/c++-gcc
+                                           c/c++-gcc
                                            emacs-lisp-checkdoc))
 
-;; flycheckを日本語化されたgccのエラーメッセージに対応させる
-;; オリジナル: 'https://futurismo.biz/archives/2992'
-;; 最新のflycheck.elを参照して、エラーパターンを修正
-;; note(備考)とfatal error(致命的エラー)の対応を追加
-;; 英語のエラーメッセージにも対応できるようにした
+;; flycheckを日本語化されたgccのエラーメッセージにも対応させる
 (defmacro flycheck-define-clike-checker (name command modes)
   `(flycheck-define-checker ,(intern (format "%s" name))
      ,(format "A %s checker using %s" name (car command))
@@ -458,28 +454,22 @@ VERBOSE: insert messages to *scratch* if non-nil.
        ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
        (optional "[" (id (one-or-more not-newline)) "]") line-end)
       
-      ;; 以下のパターンはリンカの出すエラーに対応しない
-      ;; (error
-      ;;  line-start (or "<stdin>" (file-name))
-      ;;  ":" line (optional ":" column)
-      ;;  ": " (or "fatal error" "致命的エラー" "error" "エラー") ": " (message) line-end))
-
-      ;; リンカの出すエラーに無理矢理対応
+      ;; リンカの出すエラーにも対応
       (error
-       line-start (or "<stdin>" (file-name)) ":"
+       line-start
        (or
         ;; 通常のエラーメッセージ
-        (seq line (optional ":" column)
-             ": " (or "fatal error" "致命的エラー" "error" "エラー") ": " (message) line-end)
+        (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
+             (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
         ;; リンカのエラーメッセージ
-        ;; line に数値をマッチさせないと flycheck-error-list に表示されない
-        (seq "(.text+" line (one-or-more (not (any ")"))) "): "
-             (message (one-or-more (not (any "\n")))) "\n"
-             "collect2: " (or "error" "エラー") ": " (one-or-more (not (any "\n"))) line-end)
-        )))
+        ;; 注意: line に数値をマッチさせないと flycheck-error-list に表示されない
+        ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示される
+        (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
+        )
+       ": " (message) line-end)
+      )
      :modes ',modes)
-  
-     )
+  )
 
 ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
 ;; gccは -fsyntax-only ではチェックできないエラー・警告がある
@@ -493,11 +483,12 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
 ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja-with-ld)を定義
 ;; リンカまで実行しないとチェックできないエラーがある
+;; -g でリンカのエラーメッセージにも行番号が付く
 ;; -o /dev/null でファイルは保存しないようにする
 ;; コストを考えて、コンパイル時に c-gcc-ja では検出できなかったときだけ切り替えて使う
 (flycheck-define-clike-checker
  c-gcc-ja-with-ld
- ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-o" null-device)
+ ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
  c-mode)
 
 ;; c-gcc-jaのみチェッカーとして登録
@@ -805,7 +796,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
            (setq my-command (format "./%s" file-base))
            ;; コンパイルコマンドにファイル名などを埋め込む
            (set (make-local-variable 'compile-command)
-                (format "gcc -Wall -Wextra -std=gnu11 -lm -O -o%s %s"
+                (format "gcc -Wall -Wextra -std=gnu11 -lm -g -O -o%s %s"
                         file-base
                         file-name
                         ))
