@@ -531,21 +531,21 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
 ;; エラーチェック直後に呼ばれるフック
 (add-hook 'flycheck-after-syntax-check-hook
-          (lambda  ()
-            ;; バッファが隠れている可能性もあるので必要
-            (flycheck-list-errors)
-            ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
-            (let ((header-line-background (if (flycheck-has-current-errors-p)
-                                              "orange" "lightgreen")))
-              (with-current-buffer (get-buffer "*Flycheck errors*")
-                ;; バッファが*Flycheck errors*に切り替わったので
-                ;; flycheck-has-current-errors-pはnilになることに注意
-                (face-remap-add-relative 'header-line
-                                         :background header-line-background))
-              )
-            )
-          )
+          'change-header-color)
 
+(defun change-header-color () 
+  ;; バッファが隠れている可能性もあるので必要
+  (flycheck-list-errors)
+  ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
+  (let ((header-line-background (if (flycheck-has-current-errors-p)
+                                    "orange" "lightgreen")))
+    (with-current-buffer (get-buffer "*Flycheck errors*")
+      ;; バッファが*Flycheck errors*に切り替わったので
+      ;; flycheck-has-current-errors-pはnilになることに注意
+      (face-remap-add-relative 'header-line
+                               :background header-line-background))
+    )
+  )
 ;;
 ;; display-buffer-alist関連
 ;;
@@ -1024,42 +1024,50 @@ VERBOSE: insert messages to *scratch* if non-nil.
         ))))
 
 ;; emacs-lisp-mode用の設定
-(add-hook 'emacs-lisp-mode-hook
-          #'(lambda ()
-              (when (require 'smartparens nil t)
-                (smartparens-strict-mode t)
-                (turn-off-show-smartparens-mode))
-              (when (require 'swiper nil t)
-                (global-set-key (kbd "C-s") 'swiper))
-              (when (require 'counsel nil t)
-                (global-set-key (kbd  "M-x") 'counsel-M-x))
-              (when (require 'highlight-defined nil t)
-                (highlight-defined-mode t))
-              (when (require 'paren nil t)
-                (if (fboundp 'show-paren-local-mode)
-                    (show-paren-local-mode t)
-                  (setq-local show-paren-mode t))
+(add-hook 'emacs-lisp-mode-hook 'setup-development-packages)
 
-                (setq-local show-paren-style 'expression)
-                (setq-local show-paren-when-point-inside-paren t)
-                ;; (setq-local show-paren-when-point-in-periphery t)
-                (face-remap-add-relative 'show-paren-match
-                                         :weight 'bold
-                                         :background "wheat"
-                                         )
-                )
-              (when (require 'bm nil t)
-                (global-set-key (kbd "<f2>") 'bm-next)
-                (global-set-key (kbd "S-<f2>") 'bm-toggle)
-                (set-face-attribute 'bm-face nil
-                                    :foreground "black"
-                                    :background "#c0dcc0")
-                )
+(defun setup-development-packages ()
+  "Set up development packages"
+  (interactive)
 
-              ;; 全角スペース"　"などの外見を変更
-              (when (fboundp 'whitespace-mode)
-                (whitespace-mode t))
+  (when (require 'smartparens nil t)
+    (smartparens-strict-mode t)
+    (turn-off-show-smartparens-mode))
 
-              (setq indent-tabs-mode nil)
-              )
-          )
+  (when (require 'swiper nil t)
+    (global-set-key (kbd "C-s") 'swiper))
+
+  (when (require 'counsel nil t)
+    (global-set-key (kbd  "M-x") 'counsel-M-x))
+
+  (when (require 'highlight-defined nil t)
+    (highlight-defined-mode t))
+
+  (when (require 'paren nil t)
+    (if (fboundp 'show-paren-local-mode)
+        (show-paren-local-mode t)
+      (setq-local show-paren-mode t))
+
+    (setq-local show-paren-style 'expression)
+    (setq-local show-paren-when-point-inside-paren t)
+    ;; (setq-local show-paren-when-point-in-periphery t)
+    (face-remap-add-relative 'show-paren-match
+                               :weight 'bold
+                               :background "wheat"
+                               )
+    )
+
+  (when (require 'bm nil t)
+    (global-set-key (kbd "<f2>") 'bm-next)
+    (global-set-key (kbd "S-<f2>") 'bm-toggle)
+    (set-face-attribute 'bm-face nil
+                        :foreground "black"
+                        :background "#c0dcc0")
+    )
+
+  ;; 全角スペース"　"などの外見を変更
+  (when (fboundp 'whitespace-mode)
+    (whitespace-mode t))
+
+  (setq indent-tabs-mode nil)
+  )
