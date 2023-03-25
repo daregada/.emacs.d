@@ -60,4 +60,5 @@ network-security.data
 .lsp-session-*
 /eln-cache/
 ac-comphist.dat
+elpa.orig
 
