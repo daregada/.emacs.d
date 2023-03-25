@@ -220,15 +220,23 @@
 ;; 初期化
 (package-initialize)
 
-;;
-;; 必須パッケージ関連
-;;
+;; 必須パッケージ
 (defvar my-favorite-packages
   '(
     flycheck
     powerline
     real-auto-save
     smartparens
+    ))
+
+;; 開発用パッケージ
+(defvar my-development-packages
+  '(
+    swiper
+    counsel
+    highlight-defined
+    bm
+    package-utils
     ))
 
 (defun all-packages-installed-p (package-list)
@@ -243,22 +251,58 @@ PACKAGE-LIST: list of packages."
     t))
 
 ;;
-;; 必須パッケージがインストールされていなければ自動的にインストール
+;; 引数で指定したリスト内のパッケージがインストールされていなければ自動的にインストール
 ;;
-(unless (all-packages-installed-p my-favorite-packages)
+(defun install-listed-packages-automatically (package-list &optional verbose)
+  "Install listed packages automatically.
+
+PACKAGE-LIST: list of packages.
+VERBOSE: insert messages to *scratch* if non-nil.
+"
   (with-current-buffer (get-buffer "*scratch*")
-    (insert "各種パッケージの導入作業を行ないます。\n"
-            "導入作業が終わるまでしばらく時間がかかります。\n"
-            "最上行がオレンジ色になるまでお待ちください。\n\n"))
-  (redisplay)
-  (unless package--initialized
-    (package-initialize))
-  (unless package-archive-contents
-    (package-refresh-contents))
-  (dolist (package my-favorite-packages)
-    (unless (package-installed-p package)
-      (package-install package)))
+    (when verbose
+      (insert "パッケージの自動導入作業を行ないます。\n"
+              "導入作業が終わるまでしばらく時間がかかります。\n"
+              "最上行がオレンジ色になるまでお待ちください。\n\n"))
+    (unless package--initialized
+      (when verbose 
+        (insert "パッケージシステムの初期化中。\n")
+        (redisplay))
+      (package-initialize))
+    (unless package-archive-contents
+      (when verbose 
+        (insert "パッケージの一覧を取得中。\n")
+        (redisplay))
+      (package-refresh-contents))
+    (dolist (package package-list)
+      (unless (package-installed-p package)
+        (when verbose 
+          (insert (symbol-name package) " パッケージ導入中。\n")
+          (redisplay))
+        (package-install package)))
+
+    (when verbose 
+      (insert "\nパッケージ自動導入処理が完了しました。\n\n")
+      (redisplay))
+
+    )
+  
   )
+
+;; 必須パッケージを自動インストール
+(unless (all-packages-installed-p my-favorite-packages)
+  (install-listed-packages-automatically my-favorite-packages t)
+  )
+
+;; 開発用パッケージを自動インストールする関数
+(defun install-development-packages-automatically ()
+  "Install development packages."
+  (interactive)
+  (unless (all-packages-installed-p my-development-packages)
+    (install-listed-packages-automatically my-development-packages nil)
+    )
+  )
+
 
 ;;
 ;; shell関連
