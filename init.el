@@ -484,7 +484,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;; -o /dev/null でファイルは保存しないようにする
 (flycheck-define-clike-checker
  c-gcc-ja
- ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
+ ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
  c-mode)
 
 ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja-with-ld)を定義
@@ -494,7 +494,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;; コストを考えて、コンパイル時に c-gcc-ja では検出できなかったときだけ切り替えて使う
 (flycheck-define-clike-checker
  c-gcc-ja-with-ld
- ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
+ ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
  c-mode)
 
 ;; c-gcc-jaのみチェッカーとして登録
