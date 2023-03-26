@@ -20,7 +20,9 @@
   (setq nobreak-char-display nil))
 
 ;; カスタムファイルの指定。カスタム設定が custom.el に分離されるようになる
-(setq custom-file "~/.emacs.d/custom.el")
+(setq custom-file (if (boundp 'user-emacs-directory)
+                      (expand-file-name "custom.el" user-emacs-directory)
+                    "~/.emacs.d/custom.el"))
 
 ;; 保存されたカスタムファイルを(わざと)読み込まない
 ;; (if (file-exists-p (expand-file-name custom-file))
