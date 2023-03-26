@@ -803,6 +803,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
            ;; ウィンドウ分割していなくても、チェック後に自動分割される
            ;; flycheck-after-syntax-check-hook を参照
            (flycheck-buffer)
+           ;; flycheckのエラーチェック終了まで待つ
            (while (flycheck-running-p)
              (sit-for 0.125))
            )
@@ -833,23 +834,11 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (if (one-window-p)
       ;; ウィンドウが分割されていなければ、バッファを切り換える
       (switch-to-buffer (other-buffer))
-    ;; shellバッファーから別のウィンドウに移動するときはflycheck-errorsに切り替える
-    (when (string= (buffer-name) "*shell*")
-      (switch-buffer-to-flycheck-errors "*shell*"))
+    ;; 非ファイルバッファーから別のウィンドウに移動するときはflycheck-errorsに切り替える
+    (when (eq buffer-file-name nil)
+      (switch-window-buffer-to-flycheck-errors-from (buffer-name)))
     ;; ウィンドウが分割されていれば、別ウィンドウを選択する
     (other-window 1))
-  
-  ;; (if (and (not (flycheck-errors-has-list-p))
-  ;;          (string= (buffer-name) "*Flycheck errors*")
-  ;;          (eq has-error-or-warnings t))
-  ;;     (progn
-  ;;       (set-window-buffer
-  ;;        (get-buffer-window (current-buffer))
-  ;;        (get-buffer "*compilation*"))
-  ;;       )
-  ;;   (when (string= (buffer-name) "*compilation*")
-  ;;     (switch-buffer-to-flycheck-errors "*compilation*"))
-  ;;   (other-window 1))
   )
 
 ;;
@@ -865,12 +854,12 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
 (defun mouse-set-point-after (&rest _ignored)
   (unless (string= my-prev-buffer-name (buffer-name))
-    (message (concat "mouse-set-pointアドバイス実行中: " my-prev-buffer-name "->" (buffer-name)))
+    ;; (message (concat "mouse-set-pointアドバイス実行中: " my-prev-buffer-name "->" (buffer-name)))
     (when (and (or (string= my-prev-buffer-name "*shell*")
                    (string= my-prev-buffer-name "*compilation*"))
                (and (not (eq buffer-file-name nil))
                     (string= (file-name-extension buffer-file-name t) ".c")))
-      (switch-buffer-to-flycheck-errors my-prev-buffer-name))))
+      (switch-window-buffer-to-flycheck-errors-from my-prev-buffer-name))))
 
 ;;
 ;; 現在のポイントにコマンド名を挿入
@@ -943,10 +932,9 @@ VERBOSE: insert messages to *scratch* if non-nil.
               (search-forward "警告:" nil t)) t nil))))
 
 ;;
-;; コンパイル結果のバッファをflycheck-errorsに切り替える
+;; 指定したバッファのあるウィンドウの表示をflycheck-errorsに切り替える
 ;;
-(defun switch-buffer-to-flycheck-errors (buf)
-  (unless ())
+(defun switch-window-buffer-to-flycheck-errors-from (buf)
   (cond ((get-buffer "*Flycheck errors*")
          (set-window-buffer
           (get-buffer-window buf)
@@ -978,12 +966,12 @@ VERBOSE: insert messages to *scratch* if non-nil.
          (message "エラー・警告を修正してください")
          ;; flycheck-errorsにリストがあればflycheck-errorsに切り換える
          (if (flycheck-errors-has-list-p)
-             (switch-buffer-to-flycheck-errors "*compilation*")
+             (switch-window-buffer-to-flycheck-errors-from "*compilation*")
            ;; flycheck-errorにリストがないなら、checkerをld付きのものに変更
            (add-to-list 'flycheck-checkers 'c-gcc-ja-with-ld)
            (delete 'c-gcc-ja flycheck-checkers)
              
-           (switch-buffer-to-flycheck-errors "*compilation*")
+           (switch-window-buffer-to-flycheck-errors-from "*compilation*")
            (with-current-buffer my-compiled-source-buffer
                (flycheck-buffer))
              )
