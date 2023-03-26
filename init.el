@@ -8,7 +8,7 @@
 ;;; Code:
 
 ;; 配布時にはコメントにすること
-;; (setq debug-on-error t)
+(setq debug-on-error t)
 
 ;; Emacs 28.1以降のNative Compilationの警告を抑制
 (unless (version< emacs-version "28.1")
@@ -46,7 +46,7 @@
 (setq initial-scratch-message nil)
 
 ;; カッコの対応を表示しない
-;; (show-paren-mode nil)
+(show-paren-mode nil)
 
 ;; 閉じカッコ入力時のハイライト表示をしない
 (setq blink-matching-paren nil)
@@ -97,7 +97,10 @@
   ;; 　   　 sample 		
   )
 
-
+(when (require 'highlight-parentheses nil t)
+  (custom-set-variables '(highlight-parentheses-colors '("black" "black"))
+                        '(highlight-parentheses-background-colors '("cyan" "cyan"))
+                        '(highlight-parentheses-adjacent t)))
 
 ;;
 ;; キーカスタマイズ関連
@@ -138,11 +141,17 @@
   ;; 行番号の見た目を変える
   (setq-default display-line-numbers-width 5)
   (set-face-attribute 'line-number nil
-                      :foreground "white"
-                      :background "darkgray")
+                      :foreground "darkgray"
+                      :background "silver")
   (set-face-attribute 'line-number-current-line nil
-                      :foreground "white"
-                          :background "black")
+                      :foreground "black"
+                      :background "gray")
+  ;; (set-face-attribute 'line-number nil
+  ;;                     :foreground "white"
+  ;;                     :background "darkgray")
+  ;; (set-face-attribute 'line-number-current-line nil
+  ;;                     :foreground "white"
+  ;;                     :background "black")
   )
 
 ;; Insertキーの無効化。間違って押して戻せない人が多いため
@@ -171,9 +180,9 @@
   (interactive)
   (setq mode-name "Lightweight Buffer")
   (setq major-mode 'lightweight-buffer-mode)
-  ;; (if (fboundp 'show-paren-local-mode)
-  ;;     (show-paren-local-mode nil)
-  ;;   (setq-local show-paren-mode nil))
+  (if (fboundp 'show-paren-local-mode)
+      (show-paren-local-mode nil)
+    (setq-local show-paren-mode nil))
   (run-hooks 'lightweight-buffer-mode-hook))
 
 (with-current-buffer (get-buffer "*scratch*")
@@ -642,12 +651,12 @@ VERBOSE: insert messages to *scratch* if non-nil.
    ;; show-paren-mode関連
    ;;
    ;; c-mode限定で対応するカッコの強調を行なう
-   ;; (if (fboundp 'show-paren-local-mode)
-   ;;     (show-paren-local-mode t)
-   ;;   (setq-local show-paren-mode t))
+   (if (fboundp 'show-paren-local-mode)
+       (show-paren-local-mode t)
+     (setq-local show-paren-mode t))
    
    ;; 対応するカッコのみを強調
-   ;; (setq-local show-paren-style 'parenthesis)
+   (setq-local show-paren-style 'parenthesis)
 
    ;; 全角スペース"　"などの外見を変更
    (face-remap-add-relative 'nobreak-space
@@ -1045,19 +1054,19 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (when (require 'highlight-defined nil t)
     (highlight-defined-mode t))
 
-  ;; (when (require 'paren nil t)
-  ;;   (if (fboundp 'show-paren-local-mode)
-  ;;       (show-paren-local-mode t)
-  ;;     (setq-local show-paren-mode t))
+  (when (require 'paren nil t)
+    (if (fboundp 'show-paren-local-mode)
+        (show-paren-local-mode t)
+      (setq-local show-paren-mode t))
 
-    ;; (setq-local show-paren-style 'expression)
-    ;; (setq-local show-paren-when-point-inside-paren t)
-    ;;;; (setq-local show-paren-when-point-in-periphery t)
-    ;; (face-remap-add-relative 'show-paren-match
-    ;;                            :weight 'bold
-    ;;                            :background "wheat"
-    ;;                            )
-    ;; )
+    (setq-local show-paren-style 'expression)
+    (setq-local show-paren-when-point-inside-paren t)
+    ;; (setq-local show-paren-when-point-in-periphery t)
+    (face-remap-add-relative 'show-paren-match
+                               :weight 'bold
+                               :background "white"
+                               )
+    )
 
   (when (require 'bm nil t)
     (global-set-key (kbd "<f2>") 'bm-next)
