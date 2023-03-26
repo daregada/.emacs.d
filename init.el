@@ -32,7 +32,7 @@
 (require 'cl-lib)
 
 ;;
-;; 起動時画面関連
+;; 画面表示関連
 ;;
 ;; メニューバーなどを表示しない
 (menu-bar-mode 0)
@@ -50,6 +50,10 @@
 
 ;; 閉じカッコ入力時のハイライト表示をしない
 (setq blink-matching-paren nil)
+
+;; rawバイトは16進数で表示(Emacs 26.1以降で有効)
+(unless (version< emacs-version "26.1")
+  (setq display-raw-bytes-as-hex t))
 
 
 ;; マウスでポイントの位置変更や範囲コピー、スクロールを可能に
