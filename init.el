@@ -55,6 +55,8 @@
 (unless (version< emacs-version "26.1")
   (setq display-raw-bytes-as-hex t))
 
+;; リージョンに上書き
+(delete-selection-mode t)
 
 ;; マウスでポイントの位置変更や範囲コピー、スクロールを可能に
 (xterm-mouse-mode t)
