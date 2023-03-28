@@ -138,16 +138,16 @@
   ;; 行番号の見た目を変える
   (setq-default display-line-numbers-width 5)
   (set-face-attribute 'line-number nil
-                      :foreground "darkgray"
+                      :foreground "gray"
                       :background "silver")
   (set-face-attribute 'line-number-current-line nil
                       :foreground "black"
                       :background "gray")
-  ;; (set-face-attribute 'line-number nil
-  ;;                     :foreground "white"
-  ;;                     :background "darkgray")
+  ;;(set-face-attribute 'line-number nil
+  ;;                    :foreground "brightwhite"
+  ;;                    :background "gray")
   ;; (set-face-attribute 'line-number-current-line nil
-  ;;                     :foreground "white"
+  ;;                     :foreground "brightwhite"
   ;;                     :background "black")
   )
 
@@ -1060,8 +1060,8 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (setq-local show-paren-when-point-inside-paren t)
     ;; (setq-local show-paren-when-point-in-periphery t)
     (face-remap-add-relative 'show-paren-match
-                               :weight 'bold
-                               :background "white"
+                               ;; :weight 'bold
+                               :background "color-241"
                                )
     )
 
