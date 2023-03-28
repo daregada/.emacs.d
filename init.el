@@ -443,135 +443,137 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;;
 ;; flycheck関連
 ;;
-(require 'flycheck)
-;; flycheck-error-listのID欄の横幅を6->3に
-(aset flycheck-error-list-format 4 '("ID" 3 t))
+(when (require 'flycheck)
+  ;; flycheck-error-listのID欄の横幅を6->3に
+  (aset flycheck-error-list-format 4 '("ID" 3 t))
 
-;; チェックに使わないチェッカーの既定値
-;; インストールされていない clang, cppcheck
-;; 日本語未対応の c/c++-gcc, デバッグ時に邪魔な emacs-lisp-checkdoc
-(setq-default flycheck-disabled-checkers '(c/c++-clang
-                                           c/c++-cppcheck
-                                           c/c++-gcc
-                                           emacs-lisp-checkdoc))
+  ;; チェックに使わないチェッカーの既定値
+  ;; インストールされていない clang, cppcheck
+  ;; 日本語未対応の c/c++-gcc, デバッグ時に邪魔な emacs-lisp-checkdoc
+  (setq-default flycheck-disabled-checkers '(c/c++-clang
+                                             c/c++-cppcheck
+                                             c/c++-gcc
+                                             emacs-lisp-checkdoc))
 
-;; flycheckを日本語化されたgccのエラーメッセージにも対応させる
-(defmacro flycheck-define-clike-checker (name command modes)
-  `(flycheck-define-checker ,(intern (format "%s" name))
-     ,(format "A %s checker using %s" name (car command))
-     :command (,@command source-inplace)
-     :error-patterns
-     ((info
-       line-start (or "<stdin>" (file-name))
-       ":" line (optional ":" column)
-       ": " (or "note" "備考") ": " (message) line-end)
-      
-      (warning
-       line-start (or "<stdin>" (file-name))
-       ":" line (optional ":" column)
-       ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
-       (optional "[" (id (one-or-more not-newline)) "]") line-end)
-      
-      ;; リンカの出すエラーにも対応
-      (error
-       line-start
-       (or
-        ;; 通常のエラーメッセージ
-        (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
-             (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
-        ;; リンカのエラーメッセージ
-        ;; 注意: line に数値をマッチさせないと flycheck-error-list に表示されない
-        ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示される
-        (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
-        )
-       ": " (message) line-end)
+  ;; flycheckを日本語化されたgccのエラーメッセージにも対応させる
+  (defmacro flycheck-define-clike-checker (name command modes)
+    `(flycheck-define-checker ,(intern (format "%s" name))
+       ,(format "A %s checker using %s" name (car command))
+       :command (,@command source-inplace)
+       :error-patterns
+       ((info
+	 line-start (or "<stdin>" (file-name))
+	 ":" line (optional ":" column)
+	 ": " (or "note" "備考") ": " (message) line-end)
+
+	(warning
+	 line-start (or "<stdin>" (file-name))
+	 ":" line (optional ":" column)
+	 ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
+	 (optional "[" (id (one-or-more not-newline)) "]") line-end)
+
+	;; リンカの出すエラーにも対応
+	(error
+	 line-start
+	 (or
+          ;; 通常のエラーメッセージ
+          (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
+               (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
+          ;; リンカのエラーメッセージ
+          ;; 注意: line に数値をマッチさせないと flycheck-error-list に表示されない
+          ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示される
+          (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
+          )
+	 ": " (message) line-end)
+	)
+       :modes ',modes)
+    )
+
+  ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
+  ;; gccは -fsyntax-only ではチェックできないエラー・警告がある
+  ;; -O で初期化されていない自動変数をチェック可能になる
+  ;; -S でアセンブリファイルまで作成すると、いくつかのエラー・警告がチェック可能になる
+  ;; -o /dev/null でファイルは保存しないようにする
+  (flycheck-define-clike-checker
+   c-gcc-ja
+   ;; 旧EDUのgcc 4.8.5では -fdiagnostics-plain-output オプションが使えない
+   ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
+   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
+   c-mode)
+
+  ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja-with-ld)を定義
+  ;; リンカまで実行しないとチェックできないエラーがある
+  ;; -g でリンカのエラーメッセージにも行番号が付く
+  ;; -o /dev/null でファイルは保存しないようにする
+  ;; コストを考えて、コンパイル時に c-gcc-ja では検出できなかったときだけ切り替えて使う
+  (flycheck-define-clike-checker
+   c-gcc-ja-with-ld
+   ;; 旧EDUのgcc 4.8.5では -fdiagnostics-plain-output オプションが使えない
+   ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
+   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
+   c-mode)
+
+
+  ;; c-gcc-jaのみチェッカーとして登録
+  (add-to-list 'flycheck-checkers 'c-gcc-ja)
+
+  ;; エラーを表示する関数をエコー領域を使わないものに変更
+  (setq flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list)
+
+  ;; 自動チェックするトリガーを指定
+  (setq flycheck-check-syntax-automatically
+	'(
+          mode-enabled
+          save                            ; 自動保存にも連動
+          new-line                        ; auto-completeと併用するときは無効にすること
+          ;; idle-change
+          ))
+
+  (advice-add 'next-line :after #'save-current-c-mode-buffer-if-modified)
+  (advice-add 'previous-line :after #'save-current-c-mode-buffer-if-modified)
+
+  ;; カレントバッファーのCソースコードが変更されていたら保存する
+  (defun save-current-c-mode-buffer-if-modified (&rest _ingored)
+    "Immediately save current buffer if modified."
+    (when (and (buffer-modified-p)
+               (eq major-mode 'c-mode)) 
+      (message "saved (next-line-after)")
+      (save-buffer)
+      ))
+
+  ;; エラー・警告・備考のフェイス設定
+  (set-face-foreground 'flycheck-error "white")
+  (set-face-background 'flycheck-error "red")
+  (set-face-attribute 'flycheck-error nil :underline nil :weight 'bold)
+
+  (set-face-foreground 'flycheck-warning "black")
+  (set-face-background 'flycheck-warning "orange")
+  (set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
+
+  (set-face-foreground 'flycheck-info "lightblue")
+
+  ;; 前回のコンパイルの結果を保存する
+  (defvar has-error-or-warnings nil)
+
+  ;; エラーチェック直後に呼ばれるフック
+  (add-hook 'flycheck-after-syntax-check-hook
+            'change-header-color)
+
+  (defun change-header-color () 
+    ;; バッファが隠れている可能性もあるので必要
+    (flycheck-list-errors)
+    ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
+    (let ((header-line-background (if (flycheck-has-current-errors-p)
+                                      "orange" "lightgreen")))
+      (with-current-buffer (get-buffer "*Flycheck errors*")
+	;; バッファが*Flycheck errors*に切り替わったので
+	;; flycheck-has-current-errors-pはnilになることに注意
+	(face-remap-add-relative 'header-line
+				 :background header-line-background))
       )
-     :modes ',modes)
-  )
-
-;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
-;; gccは -fsyntax-only ではチェックできないエラー・警告がある
-;; -O で初期化されていない自動変数をチェック可能になる
-;; -S でアセンブリファイルまで作成すると、いくつかのエラー・警告がチェック可能になる
-;; -o /dev/null でファイルは保存しないようにする
-(flycheck-define-clike-checker
- c-gcc-ja
- ;; 旧EDUのgcc 4.8.5では -fdiagnostics-plain-output オプションが使えない
- ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
- ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
- c-mode)
-
-;; C言語用の日本語対応エラーチェッカー(c-gcc-ja-with-ld)を定義
-;; リンカまで実行しないとチェックできないエラーがある
-;; -g でリンカのエラーメッセージにも行番号が付く
-;; -o /dev/null でファイルは保存しないようにする
-;; コストを考えて、コンパイル時に c-gcc-ja では検出できなかったときだけ切り替えて使う
-(flycheck-define-clike-checker
- c-gcc-ja-with-ld
- ;; 旧EDUのgcc 4.8.5では -fdiagnostics-plain-output オプションが使えない
- ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
- ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
- c-mode)
-
-
-;; c-gcc-jaのみチェッカーとして登録
-(add-to-list 'flycheck-checkers 'c-gcc-ja)
-
-;; エラーを表示する関数をエコー領域を使わないものに変更
-(setq flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list)
-
-;; 自動チェックするトリガーを指定
-(setq flycheck-check-syntax-automatically
-      '(
-        mode-enabled
-        save                            ; 自動保存にも連動
-        new-line                        ; auto-completeと併用するときは無効にすること
-        ;; idle-change
-        ))
-
-(advice-add 'next-line :after #'save-current-c-mode-buffer-if-modified)
-(advice-add 'previous-line :after #'save-current-c-mode-buffer-if-modified)
-
-;; カレントバッファーのCソースコードが変更されていたら保存する
-(defun save-current-c-mode-buffer-if-modified (&rest _ingored)
-  "Immediately save current buffer if modified."
-  (when (and (buffer-modified-p)
-             (eq major-mode 'c-mode)) 
-    (message "saved (next-line-after)")
-    (save-buffer)
-    ))
-
-;; エラー・警告・備考のフェイス設定
-(set-face-foreground 'flycheck-error "white")
-(set-face-background 'flycheck-error "red")
-(set-face-attribute 'flycheck-error nil :underline nil :weight 'bold)
-
-(set-face-foreground 'flycheck-warning "black")
-(set-face-background 'flycheck-warning "orange")
-(set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
-
-(set-face-foreground 'flycheck-info "lightblue")
-
-;; 前回のコンパイルの結果を保存する
-(defvar has-error-or-warnings nil)
-
-;; エラーチェック直後に呼ばれるフック
-(add-hook 'flycheck-after-syntax-check-hook
-          'change-header-color)
-
-(defun change-header-color () 
-  ;; バッファが隠れている可能性もあるので必要
-  (flycheck-list-errors)
-  ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
-  (let ((header-line-background (if (flycheck-has-current-errors-p)
-                                    "orange" "lightgreen")))
-    (with-current-buffer (get-buffer "*Flycheck errors*")
-      ;; バッファが*Flycheck errors*に切り替わったので
-      ;; flycheck-has-current-errors-pはnilになることに注意
-      (face-remap-add-relative 'header-line
-                               :background header-line-background))
     )
   )
+
 ;;
 ;; display-buffer-alist関連
 ;;
