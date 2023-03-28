@@ -8,7 +8,7 @@
 ;;; Code:
 
 ;; 配布時にはコメントにすること
-(setq debug-on-error t)
+;; (setq debug-on-error t)
 
 ;; Emacs 28.1以降のNative Compilationの警告を抑制
 (unless (version< emacs-version "28.1")
