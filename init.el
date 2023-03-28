@@ -193,7 +193,13 @@
 ;;
 ;; 起動処理を完了後
 ;;
-(advice-add 'command-line-1 :after #'display-notes)
+(if (fboundp 'advice-add)
+    (advice-add 'command-line-1 :after #'display-notes)
+  (with-current-buffer (get-buffer "*scratch*")
+    (insert "Emacsのバージョンが古くて動きません。\n"
+            "もしかしてPATHの設定を追加する.bash_profileを作っていないのでは。\n\n")
+    )
+  )
 
 (defun display-notes (&rest _ignored)
   ;; *scratch*に起動後の注意書きを表示
