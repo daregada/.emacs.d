@@ -99,11 +99,6 @@
   ;; 　   　 sample 		
   )
 
-(when (require 'highlight-parentheses nil t)
-  (custom-set-variables '(highlight-parentheses-colors '("black" "black"))
-                        '(highlight-parentheses-background-colors '("cyan" "cyan"))
-                        '(highlight-parentheses-adjacent t)))
-
 ;;
 ;; キーカスタマイズ関連
 ;;
