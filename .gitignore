@@ -61,4 +61,5 @@ network-security.data
 /eln-cache/
 ac-comphist.dat
 elpa.orig
+.hl-save
 
