@@ -14,7 +14,7 @@
 (unless (version< emacs-version "28.1")
   (custom-set-variables '(native-comp-async-report-warnings-errors 'silent)))
 
-;; Emacs 28で、全角スペースなど"　"がnobreak-spaceに追加された
+;; Emacs 28で、全角スペース"　"などがnobreak-spaceに追加された
 ;; それらすべての特殊表示を無効にする
 (unless (version< emacs-version "28.0")
   (setq nobreak-char-display nil))
@@ -197,7 +197,7 @@
     (advice-add 'command-line-1 :after #'display-notes)
   (with-current-buffer (get-buffer "*scratch*")
     (insert "Emacsのバージョンが古くて動きません。\n"
-            "もしかしてPATHの設定を追加する.bash_profileを作っていないのでは。\n\n")
+            "新しいEmacsを優先起動する設定の.bash_profileを作っていないのでは。\n\n")
     )
   )
 
@@ -613,6 +613,9 @@ VERBOSE: insert messages to *scratch* if non-nil.
 (setq-default c-default-style "k&r"
               c-basic-offset 4)
 
+;;
+;; smartparens関連
+;;
 (when (require 'smartparens nil t)
   (require 'smartparens-config)
 
@@ -657,7 +660,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
    (if (fboundp 'show-paren-local-mode)
        (show-paren-local-mode t)
      (setq-local show-paren-mode t))
-   
+
    ;; 対応するカッコのみを強調
    (setq-local show-paren-style 'parenthesis)
 
@@ -672,7 +675,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
    ;;
    (when (fboundp 'display-line-numbers-mode)
      (display-line-numbers-mode t))
-   
+
    ;;
    ;; c-mode (cc-mode)関連
    ;;
@@ -1066,9 +1069,9 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (setq-local show-paren-when-point-inside-paren t)
     ;; (setq-local show-paren-when-point-in-periphery t)
     (face-remap-add-relative 'show-paren-match
-                               ;; :weight 'bold
-                               :background "color-241"
-                               )
+                             ;; :weight 'bold
+                             :background "color-250"
+                             )
     )
 
   (when (require 'bm nil t)
