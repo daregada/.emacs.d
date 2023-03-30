@@ -1070,9 +1070,18 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (setq-local show-paren-style 'expression)
     (setq-local show-paren-when-point-inside-paren t)
     ;; (setq-local show-paren-when-point-in-periphery t)
+
+    (defface my-paren-match-remap-style
+      '((default)
+        (((class color) (min-colors 88) (background light))
+         :foreground "#904200")
+        (((class color) (min-colors 88) (background dark))
+         :foreground "#fba849")
+        )
+      "Yellow-tinted text.")
+
     (face-remap-add-relative 'show-paren-match
-                             ;; :weight 'bold
-                             :background "color-250"
+                             'my-paren-match-remap-style
                              )
     )
 
