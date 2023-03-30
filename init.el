@@ -149,12 +149,6 @@
   (set-face-attribute 'line-number-current-line nil
                       :foreground "black"
                       :background "gray")
-  ;;(set-face-attribute 'line-number nil
-  ;;                    :foreground "brightwhite"
-  ;;                    :background "gray")
-  ;; (set-face-attribute 'line-number-current-line nil
-  ;;                     :foreground "brightwhite"
-  ;;                     :background "black")
   )
 
 ;; Insertキーの無効化。間違って押して戻せない人が多いため
@@ -167,6 +161,8 @@
 (global-set-key (kbd "<f10>") 'newline-and-indent)
 (define-key lisp-interaction-mode-map (kbd "<f10>") 'eval-print-last-sexp)
 
+;; Ctrl-HをDELにする
+(define-key key-translation-map [?\C-h] [?\C-?])
 
 ;; ヘッダーラインの見た目を変える
 (set-face-attribute 'header-line nil
