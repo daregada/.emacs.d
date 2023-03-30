@@ -47,6 +47,12 @@
 
 ;; カッコの対応を表示しない
 (show-paren-mode nil)
+;; カッコのマッチ部分の背景色を、全体の背景色に応じて変える
+(defface my-paren-match-remap-style
+  '((((background dark))  (:background "color-239"))
+    (t                    (:background "color-254")))
+  "test"
+  )
 
 ;; 閉じカッコ入力時のハイライト表示をしない
 (setq blink-matching-paren nil)
@@ -1070,15 +1076,6 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (setq-local show-paren-style 'expression)
     (setq-local show-paren-when-point-inside-paren t)
     ;; (setq-local show-paren-when-point-in-periphery t)
-
-    (defface my-paren-match-remap-style
-      '((default)
-        (((class color) (min-colors 88) (background light))
-         :foreground "#904200")
-        (((class color) (min-colors 88) (background dark))
-         :foreground "#fba849")
-        )
-      "Yellow-tinted text.")
 
     (face-remap-add-relative 'show-paren-match
                              'my-paren-match-remap-style
