@@ -643,6 +643,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (define-key smartparens-mode-map (kbd "M-r") 'sp-raise-sexp)
   (define-key smartparens-mode-map (kbd "M-s") 'sp-splice-sexp)
   (define-key smartparens-mode-map (kbd "C-<up>") 'sp-splice-sexp-killing-backward)
+  (define-key smartparens-mode-map (kbd "M-<right>") 'sp-select-next-thing)
 
   ;; smartparensのカッコ削除用アドバイスを除去
   (declare-function sp-delete-pair-advice "smartparens" nil)
