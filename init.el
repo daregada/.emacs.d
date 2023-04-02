@@ -145,7 +145,7 @@
   (setq-default display-line-numbers-width 5)
   (set-face-attribute 'line-number nil
                       :foreground "gray"
-                      :background "silver")
+                      :background "brightwhite")
   (set-face-attribute 'line-number-current-line nil
                       :foreground "black"
                       :background "gray")
