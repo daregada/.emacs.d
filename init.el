@@ -145,11 +145,17 @@
   (global-set-key (kbd "<f8>") 'display-line-numbers-mode)
   (global-set-key (kbd "C-c n") 'display-line-numbers-mode)
   (global-set-key (kbd "C-c 8") 'display-line-numbers-mode)
-  ;; 行番号の見た目を変える
+  ;; 行番号の桁数を固定
   (setq-default display-line-numbers-width 5)
-  (set-face-attribute 'line-number nil
-                      :foreground "gray"
-                      :background "brightwhite")
+  ;; 通常の行番号の背景色は全体の背景色に応じて変える
+  (defface line-number
+    '((((background dark))  (:foreground "gray"
+                             :background "black"))
+      (t                    (:foreground "gray"
+                             :background "brightwhite")))
+    "line number area"
+  )
+  ;; 現在の行番号の背景色は共通
   (set-face-attribute 'line-number-current-line nil
                       :foreground "black"
                       :background "gray")
