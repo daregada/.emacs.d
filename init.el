@@ -155,6 +155,11 @@
                       :background "gray")
   )
 
+;; F9キーとCtrl-C rとCtrl-C 7に、「Emacsの再起動」を割り当て
+(global-set-key (kbd "<f9>") 'desktop-save-and-restart-emacs)
+(global-set-key (kbd "C-c r") 'desktop-save-and-restart-emacs)
+(global-set-key (kbd "C-c 9") 'desktop-save-and-restart-emacs)
+
 ;; Insertキーの無効化。間違って押して戻せない人が多いため
 (global-set-key (kbd "<insertchar>")
                 #'(lambda ()
@@ -1097,3 +1102,26 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
   (setq indent-tabs-mode nil)
   )
+
+
+;;
+;; 再起動関連
+;;
+(when (and (require 'restart-emacs nil t)
+           (require 'desktop))
+  ;; 現在開いているバッファの状態を保存してEmacsを再起動する
+  (defun desktop-save-and-restart-emacs ()
+    "Run desktop-save and restart-emacs."
+    (interactive)
+    (desktop-save "~")
+    (restart-emacs)
+    )
+
+  ;; emacs-restartによる再起動後なら、開いていたバッファーを再現
+  (when (file-exists-p "~/.emacs.desktop")
+    (desktop-read "~")
+    (delete-file "~/.emacs.desktop")
+    (message "Emacsを再起動してバッファーを復元しました"))
+  )
+
+
