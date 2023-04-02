@@ -45,6 +45,10 @@
 ;; 起動時にscratchバッファー先頭のメッセージを出さない
 (setq initial-scratch-message nil)
 
+;; 起動時にミニバッファメッセージを表示しない
+(defun display-startup-echo-area-message ())
+
+
 ;; カッコの対応を表示しない
 (show-paren-mode nil)
 ;; カッコのマッチ部分の背景色を、全体の背景色に応じて変える
