@@ -473,20 +473,20 @@ VERBOSE: insert messages to *scratch* if non-nil.
        :command (,@command source-inplace)
        :error-patterns
        ((info
-	 line-start (or "<stdin>" (file-name))
-	 ":" line (optional ":" column)
-	 ": " (or "note" "備考") ": " (message) line-end)
+         line-start (or "<stdin>" (file-name))
+         ":" line (optional ":" column)
+         ": " (or "note" "備考") ": " (message) line-end)
 
-	(warning
-	 line-start (or "<stdin>" (file-name))
-	 ":" line (optional ":" column)
-	 ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
-	 (optional "[" (id (one-or-more not-newline)) "]") line-end)
+        (warning
+         line-start (or "<stdin>" (file-name))
+         ":" line (optional ":" column)
+         ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
+         (optional "[" (id (one-or-more not-newline)) "]") line-end)
 
-	;; リンカの出すエラーにも対応
-	(error
-	 line-start
-	 (or
+;; リンカの出すエラーにも対応
+        (error
+         line-start
+         (or
           ;; 通常のエラーメッセージ
           (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
                (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
@@ -495,8 +495,8 @@ VERBOSE: insert messages to *scratch* if non-nil.
           ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示される
           (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
           )
-	 ": " (message) line-end)
-	)
+         ": " (message) line-end)
+        )
        :modes ',modes)
     )
 
@@ -533,7 +533,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
   ;; 自動チェックするトリガーを指定
   (setq flycheck-check-syntax-automatically
-	'(
+        '(
           mode-enabled
           save                            ; 自動保存にも連動
           new-line                        ; auto-completeと併用するときは無効にすること
@@ -577,10 +577,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (let ((header-line-background (if (flycheck-has-current-errors-p)
                                       "orange" "lightgreen")))
       (with-current-buffer (get-buffer "*Flycheck errors*")
-	;; バッファが*Flycheck errors*に切り替わったので
-	;; flycheck-has-current-errors-pはnilになることに注意
-	(face-remap-add-relative 'header-line
-				 :background header-line-background))
+        ;; バッファが*Flycheck errors*に切り替わったので
+        ;; flycheck-has-current-errors-pはnilになることに注意
+        (face-remap-add-relative 'header-line
+                                 :background header-line-background))
       )
     )
   )
@@ -1123,5 +1123,3 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (delete-file "~/.emacs.desktop")
     (message "Emacsを再起動してバッファーを復元しました"))
   )
-
-
