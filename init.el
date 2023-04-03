@@ -802,6 +802,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
       "export LANG=ja_JP.UTF-8\n"
       "export PATH=/snap/emacs/current/usr/bin:$PATH\n"
       "source ~/.bashrc\n"
+      "if [ -n \"$SSH_CONNECTION\" ]; then\n"
+      "\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_NAME\" `hostname | base64`\n"
+      "\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PORT\" `echo $SSH_CONNECTION | cut -d' ' -f 4 | base64`\n"
+      "fi\n"
       )])
 
   )
