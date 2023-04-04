@@ -668,6 +668,13 @@ VERBOSE: insert messages to *scratch* if non-nil.
 (add-hook
  'c-mode-common-hook
  (lambda ()
+   ;; 先頭をヘッダーラインにする
+   (setq header-line-format
+         (concat "      F5:変換, F6:切替, F7:開く F8:行番号, F9:再起動, Ctrl|Shift|Alt-F10〜12:外見変更"))
+   (face-remap-add-relative 'header-line
+                            :foreground "color-234"
+                            :background "color-78")
+
    ;;
    ;; show-paren-mode関連
    ;;
