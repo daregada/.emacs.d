@@ -1122,6 +1122,17 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;;
 (when (and (require 'restart-emacs nil t)
            (require 'desktop))
+  ;; 再起動時に端末をクリアする
+  (defun my-restart-emacs (&optional args)
+    "Start Emacs in current terminal (modified)."
+    (suspend-emacs (format "fg ; clear ; %s %s -nw"
+                           (shell-quote-argument (restart-emacs--get-emacs-binary))
+                           (restart-emacs--string-join (mapcar #'shell-quote-argument
+                                                               args)
+                                                       " "))))
+  ;; 元の関数を置き換える
+  (advice-add 'restart-emacs--start-emacs-in-terminal :override #'my-restart-emacs)
+
   ;; 現在開いているバッファの状態を保存してEmacsを再起動する
   (defun desktop-save-and-restart-emacs ()
     "Run desktop-save and restart-emacs."
