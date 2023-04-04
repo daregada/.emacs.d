@@ -172,10 +172,6 @@
                    (interactive)
                    (message "Insertキーは無効です。上書きモードは M-x overwrite-mode で。")))
 
-;; CentOS7のgnome-terminal用(Ctrl-Jが入力できないため)
-(global-set-key (kbd "<f10>") 'newline-and-indent)
-(define-key lisp-interaction-mode-map (kbd "<f10>") 'eval-print-last-sexp)
-
 ;; Ctrl-HをDELにする
 (define-key key-translation-map [?\C-h] [?\C-?])
 
