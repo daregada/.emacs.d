@@ -246,11 +246,8 @@
 ;;
 (require 'package)
 
-;; MELPAに限定
-(setq package-archives
-      '(("melpa" . "https://melpa.org/packages/")))
-;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-;;(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;; MELPAを追加
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 ;; 初期化
 (package-initialize)
