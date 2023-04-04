@@ -177,8 +177,8 @@
 
 ;; ヘッダーラインの見た目を変える
 (set-face-attribute 'header-line nil
-                    :foreground "black"
-                    :background "gray"
+                    :foreground "color-234"
+                    :background "color-248"
                     :inherit nil
                     :overline nil
                     :underline t)
@@ -233,7 +233,8 @@
     (insert "起動時の処理が完了しました。\n")
     (set-buffer-modified-p nil)
     (face-remap-add-relative 'header-line
-                             :background "orange")
+                             :foreground "color-234"
+                             :background "color-214")
 
 ))
 
@@ -347,7 +348,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;;
 ;; ファイル名はwhich-func.el
 (when (require 'which-func nil t)
-  (set-face-foreground 'which-func "orange")
+  (set-face-foreground 'which-func "color-214")
   (custom-set-variables '(which-func-unknown "外部"))
   ;; which-func-modes に設定したモードのみ有効になる
   (custom-set-variables '(which-func-modes '(c-mode emacs-lisp-mode)))
@@ -553,11 +554,11 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
   ;; エラー・警告・備考のフェイス設定
   (set-face-foreground 'flycheck-error "white")
-  (set-face-background 'flycheck-error "red")
+  (set-face-background 'flycheck-error "color-196")
   (set-face-attribute 'flycheck-error nil :underline nil :weight 'bold)
 
   (set-face-foreground 'flycheck-warning "black")
-  (set-face-background 'flycheck-warning "orange")
+  (set-face-background 'flycheck-warning "color-214")
   (set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
 
   (set-face-foreground 'flycheck-info "lightblue")
@@ -574,11 +575,12 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (flycheck-list-errors)
     ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
     (let ((header-line-background (if (flycheck-has-current-errors-p)
-                                      "orange" "lightgreen")))
+                                      "color-214" "color-78")))
       (with-current-buffer (get-buffer "*Flycheck errors*")
         ;; バッファが*Flycheck errors*に切り替わったので
         ;; flycheck-has-current-errors-pはnilになることに注意
         (face-remap-add-relative 'header-line
+                                 :foreground "color-234"
                                  :background header-line-background))
       )
     )
