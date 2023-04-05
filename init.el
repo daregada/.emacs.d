@@ -55,8 +55,8 @@
 (defface my-paren-match-remap-style
   '((((background dark))  (:background "color-239"))
     (t                    (:background "color-254")))
-  "test"
-  )
+  "Customized face"
+  :group 'paren-matching)
 
 ;; 閉じカッコ入力時のハイライト表示をしない
 (setq blink-matching-paren nil)
@@ -83,17 +83,20 @@
 ;; whitespace関連
 ;;
 (when (require 'whitespace nil t)
-  ;; nobreak-spaceとtabの外見をwhitespaceで変更する
-  (setq whitespace-style '(face           ; faceで可視化
-                           ;; trailing    ; 行末
-                           tabs           ; タブ
-                           spaces         ; スペース
-                           ;; empty       ; 先頭/末尾の空行
-                           ;; space-mark  ; 空白表示のマッピング
-                           ;; tab-mark    ; タブ表示のマッピング
-                           ))
-  ;; nobreak-spaceのみ対象とする
-  (setq whitespace-space-regexp "\\([\u00a0\u1680\u2001-\u200a\u202f\u205f\u3000]+\\)")
+  (custom-set-variables
+   ;; nobreak-spaceとtabの外見をwhitespaceで変更する
+   '(whitespace-style '(face           ; faceで可視化
+                        ;; trailing    ; 行末
+                        tabs           ; タブ
+                        spaces         ; スペース
+                        ;; empty       ; 先頭/末尾の空行
+                        ;; space-mark  ; 空白表示のマッピング
+                        ;; tab-mark    ; タブ表示のマッピング
+                        ))
+   ;; nobreak-spaceのみ対象とする
+   '(whitespace-space-regexp
+     "\\([\u00a0\u1680\u2001-\u200a\u202f\u205f\u3000]+\\)")
+   )
 
   ;; 色付けしたい空白系文字のface
   (set-face-attribute 'whitespace-space nil
@@ -106,7 +109,7 @@
                       :background "lightgray"
                       :foreground "red"
                       :underline t)
-  ;; 　   　 sample 		
+  ;; 　   　 sample 		tab  
   )
 
 ;;
@@ -154,6 +157,8 @@
       (t                    (:foreground "gray"
                              :background "brightwhite")))
     "line number area"
+    :group 'basic-faces
+    :group 'display-line-numbers
   )
   ;; 現在の行番号の背景色は共通
   (set-face-attribute 'line-number-current-line nil
@@ -467,38 +472,40 @@ VERBOSE: insert messages to *scratch* if non-nil.
                                              emacs-lisp-checkdoc))
 
   ;; flycheckを日本語化されたgccのエラーメッセージにも対応させる
-  (defmacro flycheck-define-clike-checker (name command modes)
-    `(flycheck-define-checker ,(intern (format "%s" name))
-       ,(format "A %s checker using %s" name (car command))
-       :command (,@command source-inplace)
-       :error-patterns
-       ((info
-         line-start (or "<stdin>" (file-name))
-         ":" line (optional ":" column)
-         ": " (or "note" "備考") ": " (message) line-end)
+  ;; flycheckにマクロの存在を教えるためにはeval-when-compileが必要
+  (eval-when-compile
+    (defmacro flycheck-define-clike-checker (name command modes)
+      `(flycheck-define-checker ,(intern (format "%s" name))
+         ,(format "A %s checker using %s" name (car command)) ; quoted: (caadr command) orig: (car command)
+         :command (,@command source-inplace)
+         :error-patterns
+         ((info
+           line-start (or "<stdin>" (file-name))
+           ":" line (optional ":" column)
+           ": " (or "note" "備考") ": " (message) line-end)
 
-        (warning
-         line-start (or "<stdin>" (file-name))
-         ":" line (optional ":" column)
-         ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
-         (optional "[" (id (one-or-more not-newline)) "]") line-end)
+          (warning
+           line-start (or "<stdin>" (file-name))
+           ":" line (optional ":" column)
+           ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
+           (optional "[" (id (one-or-more not-newline)) "]") line-end)
 
-;; リンカの出すエラーにも対応
-        (error
-         line-start
-         (or
-          ;; 通常のエラーメッセージ
-          (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
-               (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
-          ;; リンカのエラーメッセージ
-          ;; 注意: line に数値をマッチさせないと flycheck-error-list に表示されない
-          ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示される
-          (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
+          ;; リンカの出すエラーにも対応
+          (error
+           line-start
+           (or
+            ;; 通常のエラーメッセージ
+            (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
+                 (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
+            ;; リンカのエラーメッセージ
+            ;; 注意: line に数値をマッチさせないと flycheck-error-list に表示されない
+            ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示される
+            (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
+            )
+           ": " (message) line-end)
           )
-         ": " (message) line-end)
-        )
-       :modes ',modes)
-    )
+         :modes ',modes)
+      ))
 
   ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
   ;; gccは -fsyntax-only ではチェックできないエラー・警告がある
@@ -507,7 +514,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
   ;; -o /dev/null でファイルは保存しないようにする
   (flycheck-define-clike-checker
    c-gcc-ja
-   ;; 旧EDUのgcc 4.8.5では -fdiagnostics-plain-output オプションが使えない
+   ;; 旧EDUのgcc 4.8.5では、色付けしないための -fdiagnostics-plain-output オプションが使えない
    ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
    ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
    c-mode)
@@ -519,7 +526,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
   ;; コストを考えて、コンパイル時に c-gcc-ja では検出できなかったときだけ切り替えて使う
   (flycheck-define-clike-checker
    c-gcc-ja-with-ld
-   ;; 旧EDUのgcc 4.8.5では -fdiagnostics-plain-output オプションが使えない
+   ;; 旧EDUのgcc 4.8.5では、色付けしないための -fdiagnostics-plain-output オプションが使えない
    ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
    ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
    c-mode)
@@ -544,13 +551,14 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (advice-add 'previous-line :after #'save-current-c-mode-buffer-if-modified)
 
   ;; カレントバッファーのCソースコードが変更されていたら保存する
-  (defun save-current-c-mode-buffer-if-modified (&rest _ingored)
-    "Immediately save current buffer if modified."
-    (when (and (buffer-modified-p)
-               (eq major-mode 'c-mode)) 
-      (message "saved (next-line-after)")
-      (save-buffer)
-      ))
+  (eval-when-compile
+    (defun save-current-c-mode-buffer-if-modified (&rest _ingored)
+      "Immediately save current buffer if modified."
+      (when (and (buffer-modified-p)
+                 (eq major-mode 'c-mode)) 
+        (message "saved (next-line-after)")
+        (save-buffer)
+        )))
 
   ;; エラー・警告・備考のフェイス設定
   (set-face-foreground 'flycheck-error "white")
@@ -670,10 +678,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
  (lambda ()
    ;; 先頭をヘッダーラインにする
    (setq header-line-format
-         (concat "      F5:変換, F6:切替, F7:開く F8:行番号, F9:再起動, Ctrl|Shift|Alt-F10〜12:外見変更"))
+         (concat "       F5:変換, F6:切替, F7:開く F8:行番号, F9:再起動, (Ctrl|Shift|Alt-F10〜12:WezTerm外見)"))
    (face-remap-add-relative 'header-line
                             :foreground "color-234"
-                            :background "color-78")
+                            :background "color-111")
 
    ;;
    ;; show-paren-mode関連
@@ -684,7 +692,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
      (setq-local show-paren-mode t))
 
    ;; 対応するカッコのみを強調
-   (setq-local show-paren-style 'parenthesis)
+   (custom-set-variables '(show-paren-style 'parenthesis))
 
    ;; 全角スペース"　"などの外見を変更
    (face-remap-add-relative 'nobreak-space
@@ -1092,9 +1100,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
         (show-paren-local-mode t)
       (setq-local show-paren-mode t))
 
-    (setq-local show-paren-style 'expression)
-    (setq-local show-paren-when-point-inside-paren t)
-    ;; (setq-local show-paren-when-point-in-periphery t)
+    (custom-set-variables '(show-paren-style 'expression)
+                          '(show-paren-when-point-inside-paren t)
+                          ;; '(show-paren-when-point-in-periphery t)
+                          )
 
     (face-remap-add-relative 'show-paren-match
                              'my-paren-match-remap-style
@@ -1123,13 +1132,14 @@ VERBOSE: insert messages to *scratch* if non-nil.
 (when (and (require 'restart-emacs nil t)
            (require 'desktop))
   ;; 再起動時に端末をクリアする
-  (defun my-restart-emacs (&optional args)
-    "Start Emacs in current terminal (modified)."
-    (suspend-emacs (format "fg ; clear ; %s %s -nw"
-                           (shell-quote-argument (restart-emacs--get-emacs-binary))
-                           (restart-emacs--string-join (mapcar #'shell-quote-argument
-                                                               args)
-                                                       " "))))
+  (eval-when-compile
+    (defun my-restart-emacs (&optional args)
+      "Start Emacs in current terminal (modified)."
+      (suspend-emacs (format "fg ; clear ; %s %s -nw"
+                             (shell-quote-argument (restart-emacs--get-emacs-binary))
+                             (restart-emacs--string-join (mapcar #'shell-quote-argument
+                                                                 args)
+                                                         " ")))))
   ;; 元の関数を置き換える
   (advice-add 'restart-emacs--start-emacs-in-terminal :override #'my-restart-emacs)
 
