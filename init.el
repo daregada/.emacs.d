@@ -210,14 +210,15 @@
   (insert "\nC言語のソースファイル(拡張子.c)を作成/開いて、そこに書いてください。\n\n"))
 
 ;;
-;; 起動処理を完了後
+;; 起動処理後の表示
 ;;
-(if (fboundp 'advice-add)
-    (advice-add 'command-line-1 :after #'display-notes)
+(if (version< emacs-version "27.0")
   (with-current-buffer (get-buffer "*scratch*")
     (insert "Emacsのバージョンが古くて動きません。\n"
             "新しいEmacsを優先起動する設定の.bash_profileを作っていないのでは。\n\n")
     )
+  ;;(advice-add 'command-line-1 :after #'display-notes)
+  (add-hook 'emacs-startup-hook #'display-notes)
   )
 
 (defun display-notes (&rest _ignored)
