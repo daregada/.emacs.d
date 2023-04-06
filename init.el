@@ -258,16 +258,16 @@
 ;; 必須パッケージ
 (defvar my-favorite-packages
   '(
-    flycheck
+    restart-emacs
     powerline
     real-auto-save
     smartparens
+    flycheck
     ))
 
 ;; 開発用パッケージ
 (defvar my-development-packages
   '(
-    swiper
     counsel
     highlight-defined
     bm
@@ -334,7 +334,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
   "Install development packages."
   (interactive)
   (unless (all-packages-installed-p my-development-packages)
-    (install-listed-packages-automatically my-development-packages nil)
+    (install-listed-packages-automatically my-development-packages t)
     )
   )
 
