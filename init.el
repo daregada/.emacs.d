@@ -143,11 +143,12 @@
 (global-set-key (kbd "C-c f") 'find-practice-file)
 (global-set-key (kbd "C-c 7") 'find-practice-file)
 
+  ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号/ヘッダー表示の切り替え」を割り当て
+(global-set-key (kbd "<f8>") 'toggle-line-numbers-and-header)
+(global-set-key (kbd "C-c n") 'toggle-line-numbers-and-header)
+(global-set-key (kbd "C-c 8") 'toggle-line-numbers-and-header)
+
 (when (fboundp 'display-line-numbers-mode)
-  ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号表示の切り替え」を割り当て
-  (global-set-key (kbd "<f8>") 'display-line-numbers-mode)
-  (global-set-key (kbd "C-c n") 'display-line-numbers-mode)
-  (global-set-key (kbd "C-c 8") 'display-line-numbers-mode)
   ;; 行番号の桁数を固定
   (setq-default display-line-numbers-width 5)
   ;; 通常の行番号の背景色は全体の背景色に応じて変える
@@ -677,8 +678,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
  'c-mode-common-hook
  (lambda ()
    ;; 先頭をヘッダーラインにする
-   (setq header-line-format
-         (concat "       F5:変換, F6:切替, F7:開く F8:行番号, F9:再起動, (Ctrl|Shift|Alt-F10〜12:WezTerm外見)"))
+   (setq-local my-header-line-format
+         (concat "       F5:変換 F6:上下 F7:開く F8:切替 F9:再起動 (C|S|A-F10〜12:WezTerm外見変更)"))
+   (setq header-line-format my-header-line-format)
+   
    (face-remap-add-relative 'header-line
                             :foreground "color-234"
                             :background "color-111")
@@ -1074,6 +1077,21 @@ VERBOSE: insert messages to *scratch* if non-nil.
         ;; Cのソースファイルのバッファーにいる
         (indent-region (point-min) (point-max))
         ))))
+
+;;
+;; 行番号とヘッダー行の表示をトグルする
+;;
+(defun toggle-line-numbers-and-header ()
+  (interactive)
+  ;; 行番号はいつでもトグル
+  (when (fboundp 'display-line-numbers-mode)
+    (call-interactively 'display-line-numbers-mode))
+  ;; my-header-line-formatが存在する場合のみヘッダー行をトグル
+  (when (boundp 'my-header-line-format)
+    (if (eq header-line-format nil)
+        (setq header-line-format my-header-line-format)
+      (setq header-line-format nil)))
+  )
 
 ;; emacs-lisp-mode用の設定
 (add-hook 'emacs-lisp-mode-hook 'setup-development-packages)
