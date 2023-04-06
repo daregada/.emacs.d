@@ -1186,3 +1186,20 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (delete-file "~/.emacs.desktop")
     (message "Emacsを再起動してバッファーを復元しました"))
   )
+
+(when (eq window-system 'x)
+  (set-face-attribute 'default nil
+                      :family "UDEV Gothic NF"
+                      :height 136)
+  (set-fontset-font (frame-parameter nil 'font)
+                    'japanese-jisx0208
+                    (cons "UDEV Gothic NF" "iso10646-1"))
+  (set-fontset-font (frame-parameter nil 'font)
+                    'japanese-jisx0212
+                    (cons "UDEV Gothic NF" "iso10646-1"))
+  (set-fontset-font (frame-parameter nil 'font)
+                    'katakana-jisx0201
+                    (cons "UDEV Gothic NF" "iso10646-1"))
+)
+
+
