@@ -1089,11 +1089,14 @@ VERBOSE: insert messages to *scratch* if non-nil.
   ;; 行番号はいつでもトグル
   (when (fboundp 'display-line-numbers-mode)
     (call-interactively 'display-line-numbers-mode))
+  
   ;; my-header-line-formatが存在する場合のみヘッダー行をトグル
   (when (boundp 'my-header-line-format)
     (if (eq header-line-format nil)
-        (setq header-line-format my-header-line-format)
-      (setq header-line-format nil)))
+        (when (eq display-line-numbers nil)
+          (setq header-line-format my-header-line-format))
+      (when (eq display-line-numbers nil)
+        (setq header-line-format nil))))
   )
 
 ;; emacs-lisp-mode用の設定
