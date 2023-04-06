@@ -679,7 +679,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
  (lambda ()
    ;; 先頭をヘッダーラインにする
    (setq-local my-header-line-format
-         (concat "       F5:変換 F6:上下 F7:開く F8:切替 F9:再起動 (C|S|A-F10〜12:WezTerm外見変更)"))
+               (concat "       "
+                       "F5:変換実行 F6:上下移動 F7:開く F8:表示切替 F9:再起動"
+                       (when (string= (getenv "TERM_PROGRAM") "WezTerm")
+                         " (C|S|A-F10〜12:外見変更)")))
    (setq header-line-format my-header-line-format)
    
    (face-remap-add-relative 'header-line
