@@ -51,12 +51,27 @@
 
 ;; カッコの対応を表示しない
 (show-paren-mode nil)
+
+;;
+;; TrueColor環境かどうかのチェック
+;;
+(defun available-truecolor-p ()
+  (or (display-graphic-p)
+      (eq (tty-display-color-cells) 16777216)))
+
 ;; カッコのマッチ部分の背景色を、全体の背景色に応じて変える
-(defface my-paren-match-remap-style
-  '((((background dark))  (:background "color-239"))
-    (t                    (:background "color-254")))
-  "Customized face"
-  :group 'paren-matching)
+(if (available-truecolor-p)
+    (defface my-paren-match-remap-style
+      '((((background dark))  (:background "#4e4e4e"))
+        (t                    (:background "#e4e4e4")))
+      "Customized face"
+      :group 'paren-matching)
+  (defface my-paren-match-remap-style
+    '((((background dark))  (:background "color-239"))
+      (t                    (:background "color-254")))
+    "Customized face"
+    :group 'paren-matching)
+  )  
 
 ;; 閉じカッコ入力時のハイライト表示をしない
 (setq blink-matching-paren nil)
@@ -181,15 +196,6 @@
 ;; Ctrl-HをDELにする
 (define-key key-translation-map [?\C-h] [?\C-?])
 
-;; ヘッダーラインの見た目を変える
-(set-face-attribute 'header-line nil
-                    :foreground "color-234"
-                    :background "color-248"
-                    :inherit nil
-                    :overline nil
-                    :underline t)
-
-
 ;; 軽量バッファーモードの定義
 (defun lightweight-buffer-mode ()
   "Lightweight Buffer Mode for novice."
@@ -204,10 +210,31 @@
 (with-current-buffer (get-buffer "*scratch*")
   ;; 起動時のscratchバッファーをlightweight-buffer-modeに
   (setq initial-major-mode 'lightweight-buffer-mode)
-  ;; 先頭行をヘッダーラインに
   (setq header-line-format
-        (concat " 注意: ここにC言語のプログラムを書かないでください。"))
-  (insert "\nC言語のソースファイル(拡張子.c)を作成/開いて、そこに書いてください。\n\n"))
+        (concat " 起動時の処理を実行中です。"))
+  (if (available-truecolor-p)
+    (face-remap-add-relative 'header-line
+                             :foreground "#1c1c1c"
+                             :background "#a8a8a8")
+    (when (and (color-defined-p "color-234")
+               (color-supported-p "color-234")
+               (color-defined-p "color-248")
+               (color-supported-p "color-248"))
+      (face-remap-add-relative 'header-line
+                               :foreground "color-234"
+                               :background "color-248")
+      )
+    )
+  
+  )
+
+;; ヘッダーラインの基本の外見
+(set-face-attribute 'header-line nil
+                    :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
+                    :background (if (available-truecolor-p) "#a8a8a8" "color-248")
+                    :inherit nil
+                    :overline nil
+                    :underline t)
 
 ;;
 ;; 起動処理後の表示
@@ -228,20 +255,30 @@
   (with-current-buffer (get-buffer "*scratch*")
     (when (not (one-window-p))
       (delete-windows-on (get-buffer "*Compile-Log*")))
-    (goto-char (point-max))
+    
+  ;; 先頭行をヘッダーラインに
+  ;; (dolist (color-name (defined-colors))
+  ;;   (message color-name))
+  ;;(y-or-n-p "Continue?")
+    (setq header-line-format
+          (concat " 注意: ここにC言語のプログラムを書かないでください。"))
+
     ;; 注意書きを挿入
-    (insert "ファイルを作成/開くには、キー操作(C-x C-f)を使います。\n"
+    (goto-char (point-max))
+    (insert "\nC言語のソースファイル(拡張子.c)を作成/開いて、そこにプログラムを書いてください。\n\n"
+            "ファイルを作成/開くには、キー操作(C-x C-f)を使います。\n"
             "(「C-x」はCtrlキーを押したままXキーを押す操作。その後の「C-f」も同様)\n"
             "一番下に「Find File:」と出たら、ファイル名を入力しEnterキーを押してください。\n\n"
+            
             "ヒント: 演習用のファイル(progNN.c)であれば、もっと簡単な方法があります。\n"
             "「<f7>」(F7キー)を押し、一番下に「Program Number:」と出たら、\n"
             "プログラム番号(1桁か2桁の整数)を入力し、Enterキーを押してください。\n\n"
-    )
-    (insert "起動時の処理が完了しました。\n")
+            "起動時の処理が完了しました。\n")
+    
     (set-buffer-modified-p nil)
     (face-remap-add-relative 'header-line
-                             :foreground "color-234"
-                             :background "color-214")
+                             :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
+                             :background (if (available-truecolor-p) "#ffaf00" "color-214"))
 
 ))
 
@@ -355,7 +392,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;;
 ;; ファイル名はwhich-func.el
 (when (require 'which-func nil t)
-  (set-face-foreground 'which-func "color-214")
+  (set-face-foreground 'which-func (if (available-truecolor-p) "#ffaf00" "color-214"))
   (custom-set-variables '(which-func-unknown "外部"))
   ;; which-func-modes に設定したモードのみ有効になる
   (custom-set-variables '(which-func-modes '(c-mode emacs-lisp-mode)))
@@ -564,11 +601,11 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
   ;; エラー・警告・備考のフェイス設定
   (set-face-foreground 'flycheck-error "white")
-  (set-face-background 'flycheck-error "color-196")
+  (set-face-background 'flycheck-error (if (available-truecolor-p) "red" "color-196"))
   (set-face-attribute 'flycheck-error nil :underline nil :weight 'bold)
 
   (set-face-foreground 'flycheck-warning "black")
-  (set-face-background 'flycheck-warning "color-214")
+  (set-face-background 'flycheck-warning (if (available-truecolor-p) "#ffaf00" "color-214"))
   (set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
 
   (set-face-foreground 'flycheck-info "lightblue")
@@ -585,12 +622,13 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (flycheck-list-errors)
     ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
     (let ((header-line-background (if (flycheck-has-current-errors-p)
-                                      "color-214" "color-78")))
+                                      (if (available-truecolor-p) "#ffaf00" "color-214")
+                                    (if (available-truecolor-p) "#5fd787" "color-78"))))
       (with-current-buffer (get-buffer "*Flycheck errors*")
         ;; バッファが*Flycheck errors*に切り替わったので
         ;; flycheck-has-current-errors-pはnilになることに注意
         (face-remap-add-relative 'header-line
-                                 :foreground "color-234"
+                                 :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
                                  :background header-line-background))
       )
     )
@@ -687,8 +725,8 @@ VERBOSE: insert messages to *scratch* if non-nil.
    (setq header-line-format my-header-line-format)
    
    (face-remap-add-relative 'header-line
-                            :foreground "color-234"
-                            :background "color-111")
+                            :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
+                            :background (if (available-truecolor-p) "#87afff" "color-111"))
 
    ;;
    ;; show-paren-mode関連
