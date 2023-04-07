@@ -1,14 +1,15 @@
 ;;; init.el --- Emacs init file for EDU system (logos). -*- lexical-binding: t; -*-
-
 ;;; Commentary:
-
 ;; Edu(logos)用のinit.el
 ;; ~/.emacs.dに置くこと
-
 ;;; Code:
 
 ;; 配布時にはコメントにすること
 ;; (setq debug-on-error t)
+
+;;
+;; Emacsのバージョン依存の設定
+;;
 
 ;; Emacs 28.1以降のNative Compilationの警告を抑制
 (unless (version< emacs-version "28.1")
@@ -19,6 +20,12 @@
 (unless (version< emacs-version "28.0")
   (setq nobreak-char-display nil))
 
+;; rawバイトは16進数で表示(Emacs 26.1以降で有効)
+(unless (version< emacs-version "26.1")
+  (setq display-raw-bytes-as-hex t))
+
+
+
 ;; カスタムファイルの指定。カスタム設定が custom.el に分離されるようになる
 (setq custom-file (if (boundp 'user-emacs-directory)
                       (expand-file-name "custom.el" user-emacs-directory)
@@ -28,8 +35,16 @@
 ;; (if (file-exists-p (expand-file-name custom-file))
 ;;     (load-file (expand-file-name custom-file)))
 
+
 ;; 以下のコードで必要
 (require 'cl-lib)
+
+;;
+;; TrueColor環境かどうかのチェック
+;;
+(defun available-truecolor-p ()
+  (or (display-graphic-p)
+      (eq (tty-display-color-cells) 16777216)))
 
 ;;
 ;; 画面表示関連
@@ -49,36 +64,32 @@
 (defun display-startup-echo-area-message ())
 
 
-;; カッコの対応を表示しない
-(show-paren-mode nil)
-
 ;;
-;; TrueColor環境かどうかのチェック
+;; paren.el関連(標準パッケージ)
 ;;
-(defun available-truecolor-p ()
-  (or (display-graphic-p)
-      (eq (tty-display-color-cells) 16777216)))
+(when (require 'paren nil t)
+  ;; カッコの対応を表示しない
+  (show-paren-mode nil)
 
-;; カッコのマッチ部分の背景色を、全体の背景色に応じて変える
-(if (available-truecolor-p)
-    (defface my-paren-match-remap-style
-      '((((background dark))  (:background "#4e4e4e"))
-        (t                    (:background "#e4e4e4")))
-      "Customized face"
-      :group 'paren-matching)
+  ;; カッコのマッチ部分の背景色を、全体の背景色に応じて変える
+  ;; 関数が入る部分があるので、まとめてquoteできない点に注意
   (defface my-paren-match-remap-style
-    '((((background dark))  (:background "color-239"))
-      (t                    (:background "color-254")))
-    "Customized face"
-    :group 'paren-matching)
-  )  
+    (list (list '((background dark))
+                (list ':background (if (available-truecolor-p) "#4e4e4e" "color-239")))
+          (list 't
+                (list ':background (if (available-truecolor-p) "$e4e4e4" "color-254")))
+          )
+    "Customized paren match face"
+    :group 'paren-matching
+    )
 
-;; 閉じカッコ入力時のハイライト表示をしない
-(setq blink-matching-paren nil)
+  ;; 閉じカッコ入力時のハイライト表示をしない
+  (setq blink-matching-paren nil)
 
-;; rawバイトは16進数で表示(Emacs 26.1以降で有効)
-(unless (version< emacs-version "26.1")
-  (setq display-raw-bytes-as-hex t))
+  )
+
+
+
 
 ;; リージョンに上書き
 (delete-selection-mode t)
@@ -93,6 +104,97 @@
 (global-set-key [mouse-2] #'copy-region-as-kill)
 (global-set-key [mouse-3] #'copy-region-as-kill)
 
+
+;;
+;; package.el関連(標準パッケージ)
+;;
+(when (require 'package nil t) 
+  ;; リポジトリのリストにMELPAを追加
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+  ;; 初期化
+  (package-initialize)
+
+  ;; 必須パッケージ
+  (defvar my-favorite-packages
+    '(
+      restart-emacs
+      powerline
+      real-auto-save
+      smartparens
+      flycheck
+      ))
+
+  ;; 開発用パッケージ
+  (defvar my-development-packages
+    '(
+      counsel
+      highlight-defined
+      bm
+      package-utils
+      ))
+
+  ;; 指定されたリストに含まれるパッケージが、すでにインストール済みか調べる
+  (defun all-packages-installed-p (package-list)
+    "Check if all favorite packages are installed.
+
+PACKAGE-LIST: list of packages."
+    (interactive)
+    (catch 'early-return-in-all-packages-installed-p
+      (dolist (package package-list)
+        (unless (package-installed-p package)
+          (throw 'early-return-in-all-packages-installed-p nil)))
+      t))
+
+  ;;
+  ;; 指定したリスト内のパッケージがインストールされていなければ自動的にインストール
+  ;;
+  (defun install-listed-packages-automatically (package-list &optional verbose)
+    "Install listed packages automatically.
+
+PACKAGE-LIST: list of packages.
+VERBOSE: insert messages to *scratch* if non-nil.
+"
+    (with-current-buffer (get-buffer "*scratch*")
+      (goto-char (point-max))
+      (when verbose
+        (insert "\n"
+                "パッケージの自動導入作業を行ないます。\n"
+                "導入作業が終わるまでしばらく時間がかかります。\n"
+                "最上行がオレンジ色になるまでお待ちください。\n\n"))
+      (unless package-archive-contents
+        (when verbose 
+          (insert "パッケージの一覧を取得中。\n")
+          (redisplay))
+        (package-refresh-contents))
+      (dolist (package package-list)
+        (unless (package-installed-p package)
+          (when verbose 
+            (insert (symbol-name package) " パッケージ導入中。\n")
+            (redisplay))
+          (package-install package)))
+
+      (when verbose 
+        (insert "\nパッケージ自動導入処理が完了しました。\n\n")
+        (redisplay))
+
+      )
+    )
+
+    ;; 開発用パッケージを自動インストールする関数
+  (defun install-development-packages-automatically ()
+    "Install development packages."
+    (interactive)
+    (unless (all-packages-installed-p my-development-packages)
+      (install-listed-packages-automatically my-development-packages t)
+      )
+    )
+
+  ;; 必須パッケージを自動インストール
+  (unless (all-packages-installed-p my-favorite-packages)
+    (install-listed-packages-automatically my-favorite-packages t)
+    )
+  )
 
 ;;
 ;; whitespace関連
@@ -128,75 +230,85 @@
   )
 
 ;;
+;; 行番号関連
+;;
+(when (fboundp 'display-line-numbers-mode)
+    ;; 行番号の桁数を固定
+    (setq-default display-line-numbers-width 5)
+    ;; 通常の行番号の背景色は全体の背景色に応じて変える
+    (defface line-number
+      '((((background dark))  (:foreground "gray"
+                                           :background "black"))
+        (t                    (:foreground "gray"
+                                           :background "brightwhite")))
+      "line number area"
+      :group 'basic-faces
+      :group 'display-line-numbers
+      )
+    ;; 現在の行番号の背景色は共通
+    (set-face-attribute 'line-number-current-line nil
+                        :foreground "black"
+                        :background "gray")
+    )
+
+;;
 ;; キーカスタマイズ関連
 ;;
-;; Ctrl-Vに「貼り付け」(yank)を割り当て(Windwosユーザー向け対策)
-;; Ctrl-Vの元の機能「1画面下を表示」(scroll-up-command)はPagedownで代用可能
-(global-set-key (kbd "C-v") 'yank)
+(defun bind_global_keys ()
+  ;; Ctrl-Vに「貼り付け」(yank)を割り当て(Windwosユーザー向け対策)
+  ;; Ctrl-Vの元の機能「1画面下を表示」(scroll-up-command)はPagedownで代用可能
+  (global-set-key (kbd "C-v") 'yank)
 
-;; Ctrl-Zに「元に戻す」(undo)を割り当て(Windowsユーザー向け対策)
-;; Ctrl-Zの元の機能「一時停止」(suspend-emacs)は「M-x suspend-emacs」で代用可能
-(global-set-key (kbd "C-z") 'undo)
+  ;; Ctrl-Zに「元に戻す」(undo)を割り当て(Windowsユーザー向け対策)
+  ;; Ctrl-Zの元の機能「一時停止」(suspend-emacs)は「M-x suspend-emacs」で代用可能
+  (global-set-key (kbd "C-z") 'undo)
 
-;; F5キーとCtrl-C cとCtrl-C 5に、「編集中のプログラムを実行形式に変換する機能」を割り当て
-;; エラーが発生した場合は、下のウィンドウがflycheck-errorsの表示に戻り
-;; 変換に成功した場合は、下のウィンドウがshellの表示に切り替わってコマンド名が挿入される
-(global-set-key (kbd "<f5>") 'save-and-compile)
-(global-set-key (kbd "C-c c") 'save-and-compile)
-(global-set-key (kbd "C-c 5") 'save-and-compile)
+  ;; F5キーとCtrl-C cとCtrl-C 5に、「編集中のプログラムを実行形式に変換する機能」を割り当て
+  ;; エラーが発生した場合は、下のウィンドウがflycheck-errorsの表示に戻り
+  ;; 変換に成功した場合は、下のウィンドウがshellの表示に切り替わってコマンド名が挿入される
+  (global-set-key (kbd "<f5>") 'save-and-compile)
+  (global-set-key (kbd "C-c c") 'save-and-compile)
+  (global-set-key (kbd "C-c 5") 'save-and-compile)
 
-;; F6キーとCtrl-C sとCtrl-C 6に、「別ウィンドウ(または別バッファー)の選択」を割り当て
-;; 画面が分割表示されているときは、ポインター(カーソル)が別ウィンドウに移る
-;; (shellバッファーのウィンドウから移った場合は下のウィンドウがflycheck-errorsの表示に戻る)
-;; 画面が分割表示されていないときは、表示内容が別のバッファー(ファイルや実行画面)に切り替わる
-(global-set-key (kbd "<f6>") 'other-window-or-buffer)
-(global-set-key (kbd "C-c s") 'other-window-or-buffer)
-(global-set-key (kbd "C-c 6") 'other-window-or-buffer)
+  ;; F6キーとCtrl-C sとCtrl-C 6に、「別ウィンドウ(または別バッファー)の選択」を割り当て
+  ;; 画面が分割表示されているときは、ポインター(カーソル)が別ウィンドウに移る
+  ;; (shellバッファーのウィンドウから移った場合は下のウィンドウがflycheck-errorsの表示に戻る)
+  ;; 画面が分割表示されていないときは、表示内容が別のバッファー(ファイルや実行画面)に切り替わる
+  (global-set-key (kbd "<f6>") 'other-window-or-buffer)
+  (global-set-key (kbd "C-c s") 'other-window-or-buffer)
+  (global-set-key (kbd "C-c 6") 'other-window-or-buffer)
 
-;; F7キーとCtrl-C fとCtrl-C 7に、「指定した番号の演習用ファイル(progXX.c)を開く」を割り当て
-(global-set-key (kbd "<f7>") 'find-practice-file)
-(global-set-key (kbd "C-c f") 'find-practice-file)
-(global-set-key (kbd "C-c 7") 'find-practice-file)
+  ;; F7キーとCtrl-C fとCtrl-C 7に、「指定した番号の演習用ファイル(progXX.c)を開く」を割り当て
+  (global-set-key (kbd "<f7>") 'find-practice-file)
+  (global-set-key (kbd "C-c f") 'find-practice-file)
+  (global-set-key (kbd "C-c 7") 'find-practice-file)
 
   ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号/ヘッダー表示の切り替え」を割り当て
-(global-set-key (kbd "<f8>") 'toggle-line-numbers-and-header)
-(global-set-key (kbd "C-c n") 'toggle-line-numbers-and-header)
-(global-set-key (kbd "C-c 8") 'toggle-line-numbers-and-header)
+  ;; c-mode-common-hook に移動
 
-(when (fboundp 'display-line-numbers-mode)
-  ;; 行番号の桁数を固定
-  (setq-default display-line-numbers-width 5)
-  ;; 通常の行番号の背景色は全体の背景色に応じて変える
-  (defface line-number
-    '((((background dark))  (:foreground "gray"
-                             :background "black"))
-      (t                    (:foreground "gray"
-                             :background "brightwhite")))
-    "line number area"
-    :group 'basic-faces
-    :group 'display-line-numbers
-  )
-  ;; 現在の行番号の背景色は共通
-  (set-face-attribute 'line-number-current-line nil
-                      :foreground "black"
-                      :background "gray")
+  
+
+  ;; F9キーとCtrl-C rとCtrl-C 7に、「Emacsの再起動」を割り当て
+  (global-set-key (kbd "<f9>") 'desktop-save-and-restart-emacs)
+  (global-set-key (kbd "C-c r") 'desktop-save-and-restart-emacs)
+  (global-set-key (kbd "C-c 9") 'desktop-save-and-restart-emacs)
+
+  ;; Insertキーの無効化。間違って押して戻せない人が多いため
+  (global-set-key (kbd "<insertchar>")
+                  #'(lambda ()
+                      (interactive)
+                      (message "Insertキーは無効です。上書きモードは M-x overwrite-mode で。")))
+
+  ;; Ctrl-HをDELにする
+  (define-key key-translation-map [?\C-h] [?\C-?])
+  
   )
 
-;; F9キーとCtrl-C rとCtrl-C 7に、「Emacsの再起動」を割り当て
-(global-set-key (kbd "<f9>") 'desktop-save-and-restart-emacs)
-(global-set-key (kbd "C-c r") 'desktop-save-and-restart-emacs)
-(global-set-key (kbd "C-c 9") 'desktop-save-and-restart-emacs)
+(bind_global_keys)
 
-;; Insertキーの無効化。間違って押して戻せない人が多いため
-(global-set-key (kbd "<insertchar>")
-                #'(lambda ()
-                   (interactive)
-                   (message "Insertキーは無効です。上書きモードは M-x overwrite-mode で。")))
-
-;; Ctrl-HをDELにする
-(define-key key-translation-map [?\C-h] [?\C-?])
-
-;; 軽量バッファーモードの定義
+;;
+;; 軽量バッファーモード
+;;
 (defun lightweight-buffer-mode ()
   "Lightweight Buffer Mode for novice."
   (interactive)
@@ -207,26 +319,42 @@
     (setq-local show-paren-mode nil))
   (run-hooks 'lightweight-buffer-mode-hook))
 
-(with-current-buffer (get-buffer "*scratch*")
-  ;; 起動時のscratchバッファーをlightweight-buffer-modeに
-  (setq initial-major-mode 'lightweight-buffer-mode)
-  (setq header-line-format
-        (concat " 起動時の処理を実行中です。"))
-  (if (available-truecolor-p)
-    (face-remap-add-relative 'header-line
-                             :foreground "#1c1c1c"
-                             :background "#a8a8a8")
-    (when (and (color-defined-p "color-234")
-               (color-supported-p "color-234")
-               (color-defined-p "color-248")
-               (color-supported-p "color-248"))
-      (face-remap-add-relative 'header-line
-                               :foreground "color-234"
-                               :background "color-248")
+;;
+;; 指定したリスト中のインデックスのカラーネームがすべて存在するか調べる
+;;
+(defun available-indexed-colors-p (target)
+  (let ((color_name))
+    (catch 'early-return-in-available-indexed-color-p
+      (dolist (index target)
+        (setq color_name (concat "color-" (number-to-string index)))
+        (when (not (and (color-defined-p color_name)
+                        (color-supported-p color_name)))
+          (throw 'early-return-in-available-indexed-color-p nil))
+        )
+      t)
+    ))
+
+(defun init-scratch-buffer (&rest _ignored)
+  (with-current-buffer (get-buffer "*scratch*")
+    ;; 起動時のscratchバッファーをlightweight-buffer-modeに
+    (setq initial-major-mode 'lightweight-buffer-mode)
+    (setq header-line-format
+          (concat " 起動時の処理を実行中です。"))
+    (if (available-truecolor-p)
+        (face-remap-add-relative 'header-line
+                                 :foreground "#1c1c1c"
+                                 :background "#a8a8a8")
+      (when (available-indexed-colors-p '(234 248))
+        (face-remap-add-relative 'header-line
+                                 :foreground "color-234"
+                                 :background "color-248")
+        )
       )
-    )
+
   
-  )
+    ))
+
+(add-hook 'after-init-hook #'init-scratch-buffer)
 
 ;; ヘッダーラインの基本の外見
 (set-face-attribute 'header-line nil
@@ -281,100 +409,6 @@
                              :background (if (available-truecolor-p) "#ffaf00" "color-214"))
 
 ))
-
-;;
-;; package.el関連
-;;
-(require 'package)
-
-;; MELPAを追加
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-
-;; 初期化
-(package-initialize)
-
-;; 必須パッケージ
-(defvar my-favorite-packages
-  '(
-    restart-emacs
-    powerline
-    real-auto-save
-    smartparens
-    flycheck
-    ))
-
-;; 開発用パッケージ
-(defvar my-development-packages
-  '(
-    counsel
-    highlight-defined
-    bm
-    package-utils
-    ))
-
-(defun all-packages-installed-p (package-list)
-  "Check if all favorite packages are installed.
-
-PACKAGE-LIST: list of packages."
-  (interactive)
-  (catch 'early-return-in-all-packages-installed-p
-    (dolist (package package-list)
-      (unless (package-installed-p package)
-        (throw 'early-return-in-all-packages-installed-p nil)))
-    t))
-
-;;
-;; 引数で指定したリスト内のパッケージがインストールされていなければ自動的にインストール
-;;
-(defun install-listed-packages-automatically (package-list &optional verbose)
-  "Install listed packages automatically.
-
-PACKAGE-LIST: list of packages.
-VERBOSE: insert messages to *scratch* if non-nil.
-"
-  (with-current-buffer (get-buffer "*scratch*")
-    (when verbose
-      (insert "パッケージの自動導入作業を行ないます。\n"
-              "導入作業が終わるまでしばらく時間がかかります。\n"
-              "最上行がオレンジ色になるまでお待ちください。\n\n"))
-    (unless package--initialized
-      (when verbose 
-        (insert "パッケージシステムの初期化中。\n")
-        (redisplay))
-      (package-initialize))
-    (unless package-archive-contents
-      (when verbose 
-        (insert "パッケージの一覧を取得中。\n")
-        (redisplay))
-      (package-refresh-contents))
-    (dolist (package package-list)
-      (unless (package-installed-p package)
-        (when verbose 
-          (insert (symbol-name package) " パッケージ導入中。\n")
-          (redisplay))
-        (package-install package)))
-
-    (when verbose 
-      (insert "\nパッケージ自動導入処理が完了しました。\n\n")
-      (redisplay))
-
-    )
-  
-  )
-
-;; 必須パッケージを自動インストール
-(unless (all-packages-installed-p my-favorite-packages)
-  (install-listed-packages-automatically my-favorite-packages t)
-  )
-
-;; 開発用パッケージを自動インストールする関数
-(defun install-development-packages-automatically ()
-  "Install development packages."
-  (interactive)
-  (unless (all-packages-installed-p my-development-packages)
-    (install-listed-packages-automatically my-development-packages t)
-    )
-  )
 
 
 ;;
@@ -498,7 +532,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;;
 ;; flycheck関連
 ;;
-(when (require 'flycheck)
+(when (require 'flycheck nil t)
   ;; flycheck-error-listのID欄の横幅を6->3に
   (aset flycheck-error-list-format 4 '("ID" 3 t))
 
@@ -716,8 +750,13 @@ VERBOSE: insert messages to *scratch* if non-nil.
 (add-hook
  'c-mode-common-hook
  (lambda ()
+   ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号/ヘッダー表示の切り替え」を割り当て
+   (define-key c-mode-map (kbd "<f8>") 'toggle-line-numbers-and-header)
+   (define-key c-mode-map (kbd "C-c n") 'toggle-line-numbers-and-header)
+   (define-key c-mode-map (kbd "C-c 8") 'toggle-line-numbers-and-header)
+
    ;; 先頭をヘッダーラインにする
-   (setq-local my-header-line-format
+   (defvar my-header-line-format
                (concat "       "
                        "F5:変換実行 F6:上下移動 F7:開く F8:表示切替 F9:再起動"
                        (when (string= (getenv "TERM_PROGRAM") "WezTerm")
@@ -818,7 +857,8 @@ VERBOSE: insert messages to *scratch* if non-nil.
    ;; バックアップファイルを作らない
    ;;
    (setq-local make-backup-files nil)
-   ))
+   )
+ nil nil)
 
 ;;
 ;; autoinsert関連
