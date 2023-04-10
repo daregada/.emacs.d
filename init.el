@@ -4,121 +4,439 @@
 ;; ~/.emacs.dに置くこと
 ;;; Code:
 
-;; 配布時にはコメントにすること
-;; (setq debug-on-error t)
+;; -lオプションで指定した/バイトコンパイルする設定ファイルにuser-emacs-directoryを合致させる
+(eval-and-compile
+  (when (or load-file-name byte-compile-current-file)
+    (setq user-emacs-directory
+          (expand-file-name
+           (file-name-directory (or load-file-name byte-compile-current-file))))))
 
-;;
-;; Emacsのバージョン依存の設定
-;;
-
-;; Emacs 28.1以降のNative Compilationの警告を抑制
-(unless (version< emacs-version "28.1")
-  (custom-set-variables '(native-comp-async-report-warnings-errors 'silent)))
-
-;; Emacs 28で、全角スペース"　"などがnobreak-spaceに追加された
-;; それらすべての特殊表示を無効にする
-(unless (version< emacs-version "28.0")
-  (setq nobreak-char-display nil))
-
-;; rawバイトは16進数で表示(Emacs 26.1以降で有効)
-(unless (version< emacs-version "26.1")
-  (setq display-raw-bytes-as-hex t))
-
-
-
-;; カスタムファイルの指定。カスタム設定が custom.el に分離されるようになる
-(setq custom-file (if (boundp 'user-emacs-directory)
-                      (expand-file-name "custom.el" user-emacs-directory)
-                    "~/.emacs.d/custom.el"))
-
-;; 保存されたカスタムファイルを(わざと)読み込まない
-;; (if (file-exists-p (expand-file-name custom-file))
-;;     (load-file (expand-file-name custom-file)))
-
-
-;; 以下のコードで必要
 (require 'cl-lib)
 
-;;
-;; TrueColor環境かどうかのチェック
-;;
-(defun available-truecolor-p ()
-  (or (display-graphic-p)
-      (eq (tty-display-color-cells) 16777216)))
+;; leafの読み込み
+(eval-and-compile
+  (customize-set-variable
+   'package-archives '(("gnu"   . "https://elpa.gnu.org/packages/")
+                       ("melpa" . "https://melpa.org/packages/")
+                       ("org"   . "https://orgmode.org/elpa/")))
+  (package-initialize)
+  (unless (package-installed-p 'leaf)
+    (with-current-buffer (get-buffer "*scratch*")
+      (setq initial-major-mode 'lightweight-buffer-mode)
+      (setq header-line-format
+            (concat " 起動時の処理を実行中です。"))
+      (insert "\nパッケージの導入作業を行います。しばらくお待ちください。\n")
+      (redisplay))
+    (package-refresh-contents)
+    (package-install 'leaf))
 
-;;
-;; 画面表示関連
-;;
-;; メニューバーなどを表示しない
-(menu-bar-mode 0)
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
+  (leaf leaf-keywords
+    :ensure t
+    :init
+    ;; optional packages if you want to use :hydra, :el-get, :blackout,,,
+    ;; (leaf hydra :ensure t)
+    ;; (leaf el-get :ensure t)
+    ;; (leaf blackout :ensure t)
 
-;; Emacsのスタート画面を消す
-(setq inhibit-startup-screen t)
+    :config
+    ;; initialize leaf-keywords.el
+    (leaf-keywords-init))
 
-;; 起動時にscratchバッファー先頭のメッセージを出さない
-(setq initial-scratch-message nil)
-
-;; 起動時にミニバッファメッセージを表示しない
-(defun display-startup-echo-area-message ())
-
-
-;;
-;; paren.el関連(標準パッケージ)
-;;
-(when (require 'paren nil t)
-  ;; カッコの対応を表示しない
-  (show-paren-mode nil)
-
-  ;; カッコのマッチ部分の背景色を、全体の背景色に応じて変える
-  ;; 関数が入る部分があるので、まとめてquoteできない点に注意
-  (defface my-paren-match-remap-style
-    (list (list '((background dark))
-                (list ':background (if (available-truecolor-p) "#4e4e4e" "color-239")))
-          (list 't
-                (list ':background (if (available-truecolor-p) "$e4e4e4" "color-254")))
-          )
-    "Customized paren match face"
-    :group 'paren-matching
+  (leaf leaf-tree
+    :ensure t imenu-list
+    :custom
+    ((imenu-list-size . 30)
+     (imenu-list-position . 'left))
     )
-
-  ;; 閉じカッコ入力時のハイライト表示をしない
-  (setq blink-matching-paren nil)
 
   )
 
 
 
+(provide 'init)
+(defvar my-development t)
 
-;; リージョンに上書き
-(delete-selection-mode t)
 
-;; マウスでポイントの位置変更や範囲コピー、スクロールを可能に
-(xterm-mouse-mode t)
-(mouse-wheel-mode t)
-;; ホイールでスクロール
-(global-set-key [mouse-4] #'(lambda () (interactive) (scroll-down 1)))
-(global-set-key [mouse-5] #'(lambda () (interactive) (scroll-up   1)))
-;; 右・中クリックでリージョンをコピー
-(global-set-key [mouse-2] #'copy-region-as-kill)
-(global-set-key [mouse-3] #'copy-region-as-kill)
+;; カスタムファイルの指定。カスタム設定が custom.el に分離されるようになる
+;; 保存されたカスタムファイルを(わざと)読み込まない
+(leaf cus-edit
+  :doc "tools for customizing Emacs and Lisp packages"
+  :tag "builtin" "faces" "help"
+  :custom
+  `((custom-file . ,(locate-user-emacs-file "custom.el"))))
+
+
+;; 静かに起動
+(leaf startup
+  :custom
+  (
+   ;; Emacsのスタート画面を消す
+   (inhibit-startup-screen            . t)
+   ;; 起動時にscratchバッファー先頭のメッセージを出さない
+   (initial-scratch-message           . nil)
+   )
+  :config
+  ;; 起動時にミニバッファにメッセージを表示
+  (defun display-startup-echo-area-message ()
+    (message "Emacsを起動しました。"))
+  ;; Emacs 28.1以降のNative Compilationの警告を抑制
+  (unless (version< emacs-version "28.1")
+    (custom-set-variables '(native-comp-async-report-warnings-errors 'silent)))
+
+  )
+
+
+;; EmacsのC言語部分で定義されている変数群など
+(leaf cus-start
+  :doc "define customization properties of builtins"
+  :tag "builtin" "internal"
+  :custom
+  (
+   ;; (user-full-name . "YOUR NAME")
+   ;; (user-mail-address . "hogehoge@example.com")
+   ;; (user-login-name . "hogehoge")
+   (create-lockfiles . nil)
+   (debug-on-error . t)
+   (init-file-debug . t)
+   (frame-resize-pixelwise . t)
+   (enable-recursive-minibuffers . t)
+   (history-length . 1000)
+   (history-delete-duplicates . t)
+   (scroll-preserve-screen-position . t)
+   (scroll-conservatively . 100)
+   (mouse-wheel-scroll-amount . '(1 ((control) . 5)))
+   (ring-bell-function . 'ignore)
+   (text-quoting-style . 'straight)
+   (truncate-lines . t)
+   ;; (use-dialog-box . nil)
+   ;; (use-file-dialog . nil)
+   (menu-bar-mode . nil)
+   (tool-bar-mode . nil)
+   (scroll-bar-mode . nil)
+   ;; 字下げにタブ文字を使わない
+   (indent-tabs-mode . nil)
+   )
+  :config
+  ;; (defalias 'yes-or-no-p 'y-or-n-p)
+  ;; Ctrl-h を DEL に変換
+  (keyboard-translate ?\C-h ?\C-?)
+  ;; 全角スペース"　"などnobreak-spaceに追加された文字の特殊表示を無効
+  (unless (version< emacs-version "28.0")
+    (setq nobreak-char-display nil))
+  ;; rawバイトは16進数で表示(Emacs 26.1以降で有効)
+  (unless (version< emacs-version "26.1")
+    (setq display-raw-bytes-as-hex t))
+  )
+
+
+;; 外部でファイルが書き換えられたときの対応
+(leaf autorevert
+  :doc "revert buffers when files on disk change"
+  :tag "builtin"
+  :custom
+  (
+   (auto-revert-interval . 1)
+   )
+  :global-minor-mode global-auto-revert-mode)
+
+
+;; 選択中にキー入力すると選択部分が削除される
+(leaf delsel
+  :doc "delete selection if you insert"
+  :tag "builtin"
+  :global-minor-mode delete-selection-mode)
+
+
+;; カッコの強調表示
+(leaf paren
+  :doc "highlight matching paren"
+  :tag "builtin"
+  :defvar (show-paren-when-point-inside-paren show-paren-when-point-in-periphery show-paren-style)
+  :mode-hook
+  (c-mode-common-hook . ((setq-local show-paren-style 'expression)
+                         (setq-local show-paren-when-point-inside-paren nil)
+                         (setq-local show-paren-when-point-in-periphery nil)
+                         (face-remap-add-relative 'show-paren-match 'my-paren-match-remap-style)
+                         (setq-local show-paren-mode t)
+                         ))
+  (emacs-lisp-mode-hook . ((setq-local show-paren-style 'expression)
+                           (setq-local show-paren-when-point-inside-paren nil)
+                           (setq-local show-paren-when-point-in-periphery nil)
+                           (face-remap-add-relative 'show-paren-match 'my-paren-match-remap-style)
+                           (setq-local show-paren-mode t)
+                           ))
+  (lightweight-buffer-mode-hook . ((setq-local show-paren-mode nil)))
+  :preface
+  ;; TrueColor環境かどうかのチェック
+  (defun available-truecolor-p ()
+    "Return t if truecolor is available."
+    (interactive)
+    (let ((result (or (display-graphic-p)
+                      (eq (tty-display-color-cells) 16777216))))
+      (when (called-interactively-p 'any)
+        (message (format "%s" result)))
+      result))
+  
+  :custom
+  (
+   (show-paren-delay . 0.1)
+   (show-paren-style . 'parenthesis)
+   (show-paren-mode . nil)
+   )
+  :config
+  (defface my-paren-match-remap-style
+    `((((background dark)) (:background ,(if (available-truecolor-p) "#4e4e4e" "color-239")))
+      (t                   (:background ,(if (available-truecolor-p) "#e4e4e4 ""color-254"))))
+      "Customized paren match face"
+      :group 'init
+      )
+  )
+
+
+;; simple関連
+(leaf simple
+  :doc "basic editing commands for Emacs"
+  :tag "builtin" "internal"
+  :custom
+  ((kill-ring-max . 100)
+   (kill-read-only-ok . t)
+   (kill-whole-line . t)
+   (eval-expression-print-length . nil)
+   (eval-expression-print-level . nil)
+   ;; 閉じカッコ入力時のハイライト表示
+   (blink-matching-paren . nil)
+           
+   )
+  )
+
+
+;; whitespace関連
+(leaf whitespace
+  :doc "visualize tab, space, nobreak-space"
+  :tag "builtin"
+  :hook
+  ((c-mode-common-hook   . whitespace-mode)
+   (emacs-lisp-mode-hook . whitespace-mode))
+  :custom-face
+  ((whitespace-hspace . '((t (:background "pink" :foreground "black"))))
+   (whitespace-tab . '((t (:background "lightgray" :foreground "red" :underline t)))))
+  :custom
+  (
+   ;; nobreak-spaceとtabの外見をwhitespaceで変更する
+   (whitespace-style . '(face                            ; faceで可視化
+                         ;; trailing                        ; 行末の空白
+                         tabs                            ; タブ
+                         spaces                          ; スペース(spaceとnobreak-spaceを両方含む)
+                         ;; empty                           ; ファイル先頭/末尾の空行
+                         ;; space-mark                      ; 空白表示のマッピング
+                         ;; tab-mark                        ; タブ表示のマッピング
+                         ))
+
+   ;; 上記 spaces の設定では space と nobreak-space の両方が対象になる
+   ;; spaceの正規表現。空文字列にできないので、実質的に空になる内容を設定
+   (whitespace-space-regexp . "\\(\\)")
+   ;; nobreak-spaceの正規表現
+   (whitespace-hspace-regexp . "\\([\u00a0\u1680\u2001-\u200a\u202f\u205f\u3000]+\\)")
+   ;; 対象とするグローバルモード
+   (whitespace-global-modes . '(not eww-mode
+                                    term-mode
+                                    eshell-mode
+                                    org-agenda-mode
+                                    calendar-mode))
+   ;; 表示サンプル \u3000[　]  \u00a0[ ] tab[		]  
+   )
+  )
+
+
+;; 端末でもマウスを使用可能に
+(leaf xt-mouse
+  :doc "Enable mouse in terminal"
+  :tag "builtin"
+  :unless (window-system)
+  :global-minor-mode xterm-mouse-mode
+  )
+
+
+;; マウス関連(パッケージなし)
+(leaf *mouse-support
+  ;; 端末で以下の設定を有効にするには、xterm-mouse-modeにしておく必要がある
+  :after xt-mouse
+  :defvar (my-prev-buffer-name)
+  ;; マウス操作で*shell*や*compilation*バッファからソースコードに切り替えた時に*Flycheck errors*を表示
+  :advice
+  ;; (advice-add 'mouse-set-point :before #'mouse-set-point-before)
+  (:before mouse-set-point my-mouse-set-point-before)
+  ;; (advice-add 'mouse-set-point :after #'mouse-set-point-after)
+  (:after  mouse-set-point my-mouse-set-point-after)
+  :bind
+  (
+   ;; 右・中クリックでリージョンをコピー
+   ("<mouse-2>" . copy-region-as-kill)
+   ("<mouse-3>" . copy-region-as-kill)
+
+   ;; ホイールで1行ずつスクロール
+   ("<mouse-4>" . (lambda () (interactive) (scroll-down 1)))
+   ("<mouse-5>" . (lambda () (interactive) (scroll-up   1)))
+
+
+   ;; Alt-ホイールで5行ずつスクロール
+   ("M-<mouse-4>" . (lambda () (interactive) (scroll-down 10)))
+   ("M-<mouse-5>" . (lambda () (interactive) (scroll-up   10)))
+   )
+  :preface
+  (defun my-mouse-set-point-before (&rest _ignored)
+    (setq my-prev-buffer-name (buffer-name)))
+
+  (defun my-mouse-set-point-after (&rest _ignored)
+    (unless (string= my-prev-buffer-name (buffer-name))
+      ;; (message (concat "mouse-set-pointアドバイス実行中: " my-prev-buffer-name "->" (buffer-name)))
+      (when (and (or (string= my-prev-buffer-name "*shell*")
+                     (string= my-prev-buffer-name "*compilation*"))
+                 (and (not (eq buffer-file-name nil))
+                      (string= (file-name-extension buffer-file-name t) ".c")))
+        (switch-window-buffer-to-flycheck-errors-from my-prev-buffer-name))))
+  
+  )
+
+
+;; 行番号関連
+(leaf display-line-numbers
+  :doc "interface for display-line-numbers"
+  :tag "builtin"
+  :emacs>= 26.1
+  :hook
+  ((c-mode-common-hook . display-line-numbers-mode))
+  
+  :setq-default
+  (
+   ;; 行番号の桁数を固定
+   (display-line-numbers-width . 5)
+   )
+  :custom-face
+  ;; :background を設定すると、デフォルトの背景の透明度が引き継がれない
+  ((line-number . '((((background dark)) (:foreground "white"))
+                    (t                   (:foreground "black"))))
+   (line-number-current-line . '((t (:background "gray" :foreground "black")))))
+
+  )
+
+
+;; キーカスタマイズ関連(パッケージなし)
+(leaf *bind-global-keys
+  :doc "binding some keys globally"
+  :bind (
+         ;; Ctrl-Vに「貼り付け」(yank)を割り当て(Windwosユーザー向け対策)
+         ;; Ctrl-Vの元の機能「1画面下を表示」(scroll-up-command)はPagedownで代用可能
+         ("C-v" . yank)
+         
+         ;; Ctrl-Zに「元に戻す」(undo)を割り当て(Windowsユーザー向け対策)
+         ;; Ctrl-Zの元の機能「一時停止」(suspend-emacs)は「M-x suspend-emacs」で代用可能
+         ("C-z" . undo)
+         
+         ;; F5キーとCtrl-C cとCtrl-C 5に、「編集中のプログラムを実行形式に変換する機能」を割り当て
+         ;; エラーが発生した場合は、下のウィンドウがflycheck-errorsの表示に戻り
+         ("<f5>" . 'save-and-compile)
+         ("C-c c" . 'save-and-compile)
+         ("C-c 5" . 'save-and-compile)
+         
+         ;; F6キーとCtrl-C sとCtrl-C 6に、「別ウィンドウ(または別バッファー)の選択」を割り当て
+         ;; 画面が分割表示されているときは、ポインター(カーソル)が別ウィンドウに移る
+         ;; (shellバッファーのウィンドウから移った場合は下のウィンドウがflycheck-errorsの表示に戻る)
+         ;; 画面が分割表示されていないときは、表示内容が別のバッファー(ファイルや実行画面)に切り替わる
+         ("<f6>" . other-window-or-buffer)
+         ("C-c s" . other-window-or-buffer)
+         ("C-c 6" . other-window-or-buffer)
+         
+         ;; F7キーとCtrl-C fとCtrl-C 7に、「指定した番号の演習用ファイル(progXX.c)を開く」を割り当て
+         ("<f7>" . find-practice-file)
+         ("C-c f" . find-practice-file)
+         ("C-c 7" . find-practice-file)
+         
+         ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号/ヘッダー表示の切り替え」を割り当て
+         ("<f8>" . toggle-line-numbers-and-header)
+         ("C-c n" . toggle-line-numbers-and-header)
+         ("C-c 8" . toggle-line-numbers-and-header)
+
+         ;; F9キーとCtrl-C rとCtrl-C 7に、「Emacsの再起動」を割り当て
+         ("<f9>" . desktop-save-and-restart-emacs)
+         ("C-c r" . desktop-save-and-restart-emacs)
+         ("C-c 9" . desktop-save-and-restart-emacs)
+
+         ;; F10～F12キーに、「WezTermの外見変更ガイダンス」を割り当て
+         ;; Ctrl/Shift/Altキーと組み合わせた場合は、WezTerm側で処理される
+         ("<f10>" . echo-guidance-for-customizing-wezterm-appearance)
+         ("<f11>" . echo-guidance-for-customizing-wezterm-appearance)
+         ("<f12>" . echo-guidance-for-customizing-wezterm-appearance)
+
+         ;; Insertキーの無効化。間違って押して戻せない人が多いため
+         ("<insertchar>" . (lambda ()
+                             (interactive)
+                             (message "Insertキーは無効です。上書きモードは M-x overwrite-mode で。")))
+
+         )
+  :preface
+  ;; WezTerm外見変更用のガイダンスを表示
+  (defun echo-guidance-for-customizing-wezterm-appearance ()
+    "echo guidance for wezterm appearance cutomization"
+    (interactive)
+    (when (string= (getenv "TERM_PROGRAM") "WezTerm")
+      (message "WezTermの外見変更には、CtrlキーかShiftキーかAltキーのどれかとF10～F12キーを組み合わせてください。")
+      )
+    )
+
+  ;; 別ウィンドウ(または別バッファー)の選択
+  (defun other-window-or-buffer ()
+    (interactive)
+    (if (one-window-p)
+        ;; ウィンドウが分割されていなければ、バッファを切り換える
+        (switch-to-buffer (other-buffer))
+      ;; 非ファイルバッファーから別のウィンドウに移動するときはflycheck-errorsに切り替える
+      (when (eq buffer-file-name nil)
+        (switch-window-buffer-to-flycheck-errors-from (buffer-name)))
+      ;; ウィンドウが分割されていれば、別ウィンドウを選択する
+      (other-window 1))
+    )
+
+  ;; 指定した番号(通常は2桁)を持つ演習用プログラム「progXX.c」を開く
+  (defun find-practice-file (number)
+    "指定した番号(通常は2桁)を持つ演習用プログラム「progXX.c」を開く"
+    (interactive "nProgram Number: ")
+    (let ((file-name (format "~/prog%02d.c" number))
+          )
+      (when (eq buffer-file-name nil)
+        (other-window 1))
+      (find-file file-name)
+      ))
+
+  ;; 行番号とヘッダー行の表示をトグルする
+  (defun toggle-line-numbers-and-header ()
+    (interactive)
+    ;; 行番号はいつでもトグル
+    (when (fboundp 'display-line-numbers-mode)
+      (call-interactively 'display-line-numbers-mode))
+    
+    ;; my-header-line-formatが存在する場合のみヘッダー行をトグル
+    (when (and (boundp 'my-header-line-format)
+               (eq major-mode 'c-mode))
+      (if (eq header-line-format nil)
+          (when (eq display-line-numbers nil)
+            (setq header-line-format my-header-line-format))
+        (when (eq display-line-numbers nil)
+          (setq header-line-format nil))))
+    )
+
+  )
 
 
 ;;
 ;; package.el関連(標準パッケージ)
 ;;
 (when (require 'package nil t) 
-  ;; リポジトリのリストにMELPAを追加
-  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-
-  ;; 初期化
-  (package-initialize)
 
   ;; 必須パッケージ
   (defvar my-favorite-packages
     '(
-      restart-emacs
+      ;; restart-emacs
       powerline
       real-auto-save
       smartparens
@@ -196,115 +514,6 @@ VERBOSE: insert messages to *scratch* if non-nil.
     )
   )
 
-;;
-;; whitespace関連
-;;
-(when (require 'whitespace nil t)
-  (custom-set-variables
-   ;; nobreak-spaceとtabの外見をwhitespaceで変更する
-   '(whitespace-style '(face           ; faceで可視化
-                        ;; trailing    ; 行末
-                        tabs           ; タブ
-                        spaces         ; スペース
-                        ;; empty       ; 先頭/末尾の空行
-                        ;; space-mark  ; 空白表示のマッピング
-                        ;; tab-mark    ; タブ表示のマッピング
-                        ))
-   ;; nobreak-spaceのみ対象とする
-   '(whitespace-space-regexp
-     "\\([\u00a0\u1680\u2001-\u200a\u202f\u205f\u3000]+\\)")
-   )
-
-  ;; 色付けしたい空白系文字のface
-  (set-face-attribute 'whitespace-space nil
-                      :background "pink"
-                      :foreground "black"
-                      :weight 'bold)
-
-  ;; 色付けしたいタブ系文字のface
-  (set-face-attribute 'whitespace-tab nil
-                      :background "lightgray"
-                      :foreground "red"
-                      :underline t)
-  ;; 　   　 sample 		tab  
-  )
-
-;;
-;; 行番号関連
-;;
-(when (fboundp 'display-line-numbers-mode)
-    ;; 行番号の桁数を固定
-    (setq-default display-line-numbers-width 5)
-    ;; 通常の行番号の背景色は全体の背景色に応じて変える
-    (defface line-number
-      '((((background dark))  (:foreground "gray"
-                                           :background "black"))
-        (t                    (:foreground "gray"
-                                           :background "brightwhite")))
-      "line number area"
-      :group 'basic-faces
-      :group 'display-line-numbers
-      )
-    ;; 現在の行番号の背景色は共通
-    (set-face-attribute 'line-number-current-line nil
-                        :foreground "black"
-                        :background "gray")
-    )
-
-;;
-;; キーカスタマイズ関連
-;;
-(defun bind_global_keys ()
-  ;; Ctrl-Vに「貼り付け」(yank)を割り当て(Windwosユーザー向け対策)
-  ;; Ctrl-Vの元の機能「1画面下を表示」(scroll-up-command)はPagedownで代用可能
-  (global-set-key (kbd "C-v") 'yank)
-
-  ;; Ctrl-Zに「元に戻す」(undo)を割り当て(Windowsユーザー向け対策)
-  ;; Ctrl-Zの元の機能「一時停止」(suspend-emacs)は「M-x suspend-emacs」で代用可能
-  (global-set-key (kbd "C-z") 'undo)
-
-  ;; F5キーとCtrl-C cとCtrl-C 5に、「編集中のプログラムを実行形式に変換する機能」を割り当て
-  ;; エラーが発生した場合は、下のウィンドウがflycheck-errorsの表示に戻り
-  ;; 変換に成功した場合は、下のウィンドウがshellの表示に切り替わってコマンド名が挿入される
-  (global-set-key (kbd "<f5>") 'save-and-compile)
-  (global-set-key (kbd "C-c c") 'save-and-compile)
-  (global-set-key (kbd "C-c 5") 'save-and-compile)
-
-  ;; F6キーとCtrl-C sとCtrl-C 6に、「別ウィンドウ(または別バッファー)の選択」を割り当て
-  ;; 画面が分割表示されているときは、ポインター(カーソル)が別ウィンドウに移る
-  ;; (shellバッファーのウィンドウから移った場合は下のウィンドウがflycheck-errorsの表示に戻る)
-  ;; 画面が分割表示されていないときは、表示内容が別のバッファー(ファイルや実行画面)に切り替わる
-  (global-set-key (kbd "<f6>") 'other-window-or-buffer)
-  (global-set-key (kbd "C-c s") 'other-window-or-buffer)
-  (global-set-key (kbd "C-c 6") 'other-window-or-buffer)
-
-  ;; F7キーとCtrl-C fとCtrl-C 7に、「指定した番号の演習用ファイル(progXX.c)を開く」を割り当て
-  (global-set-key (kbd "<f7>") 'find-practice-file)
-  (global-set-key (kbd "C-c f") 'find-practice-file)
-  (global-set-key (kbd "C-c 7") 'find-practice-file)
-
-  ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号/ヘッダー表示の切り替え」を割り当て
-  ;; c-mode-common-hook に移動
-
-  
-
-  ;; F9キーとCtrl-C rとCtrl-C 7に、「Emacsの再起動」を割り当て
-  (global-set-key (kbd "<f9>") 'desktop-save-and-restart-emacs)
-  (global-set-key (kbd "C-c r") 'desktop-save-and-restart-emacs)
-  (global-set-key (kbd "C-c 9") 'desktop-save-and-restart-emacs)
-
-  ;; Insertキーの無効化。間違って押して戻せない人が多いため
-  (global-set-key (kbd "<insertchar>")
-                  #'(lambda ()
-                      (interactive)
-                      (message "Insertキーは無効です。上書きモードは M-x overwrite-mode で。")))
-
-  ;; Ctrl-HをDELにする
-  (define-key key-translation-map [?\C-h] [?\C-?])
-  
-  )
-
-(bind_global_keys)
 
 ;;
 ;; 軽量バッファーモード
@@ -314,9 +523,6 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (interactive)
   (setq mode-name "Lightweight Buffer")
   (setq major-mode 'lightweight-buffer-mode)
-  (if (fboundp 'show-paren-local-mode)
-      (show-paren-local-mode nil)
-    (setq-local show-paren-mode nil))
   (run-hooks 'lightweight-buffer-mode-hook))
 
 ;;
@@ -411,36 +617,54 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ))
 
 
-;;
 ;; shell関連
-;;
-(when (require 'shell)
-  ;; プロンプトは読み取り専用
-  (custom-set-variables '(comint-prompt-read-only t))
+(leaf shell
+  :doc "specialized comint.el for running the shell"
+  :custom
+  (
+   ;; プロンプトは読み取り専用
+   (comint-prompt-read-only . t)
+   )
+  :config
   ;; プロンプトにコマンドの戻り値($?)を含める
   (setenv "PS1" "[\\u@\\h \\W ($(echo $?;))]\\$ ")
+
   )
 
-;;
-;; which-function-mode関連
-;;
-;; ファイル名はwhich-func.el
-(when (require 'which-func nil t)
-  (set-face-foreground 'which-func (if (available-truecolor-p) "#ffaf00" "color-214"))
-  (custom-set-variables '(which-func-unknown "外部"))
-  ;; which-func-modes に設定したモードのみ有効になる
-  (custom-set-variables '(which-func-modes '(c-mode emacs-lisp-mode)))
+
+;; which-function-mode関連(ファイル名はwhich-func.el)
+(leaf which-func
+  :doc "print current function in mode line"
+  :tag "builtin"
+  :custom
+  (
+   ;; 関数不明時の表示
+   (which-func-unknown . "外部")
+   ;; which-func-modes に設定したモードのみ有効
+   (which-func-modes . '(c-mode emacs-lisp-mode))
+   )
+  :config
   ;; グローバルに有効化(which-func-modes 参照)
   (which-function-mode t)
+  :defer-config
+  (set-face-foreground 'which-func (if (available-truecolor-p) "#ffaf00" "color-214"))
+  
   )
 
-;;
-;; powerline関連
-;;
-(when (require 'powerline nil t)
-  (custom-set-variables '(powerline-display-buffer-size nil)
-                        '(powerline-display-mule-info nil))
 
+;; powerline関連
+(leaf powerline
+  :doc "Rewrite of Powerline"
+  :ensure t
+  :require cl-lib
+
+  :custom
+  (
+   (powerline-display-buffer-size . nil)
+   (powerline-display-mule-info . nil)
+   )
+
+  :preface
   (defun powerline-my-theme ()
     "Setup my mode-line."
     (interactive)
@@ -512,6 +736,10 @@ VERBOSE: insert messages to *scratch* if non-nil.
                   (powerline-fill face2 (powerline-width rhs))
                   (powerline-render rhs)))))))
 
+  :config
+  (powerline-my-theme)
+
+  :defer-config
   (set-face-attribute 'mode-line           nil
                       :foreground "#fff" :background "#000000" :box     nil)
   (set-face-attribute 'powerline-active1   nil
@@ -524,134 +752,126 @@ VERBOSE: insert messages to *scratch* if non-nil.
                       :foreground "#444" :background "#ccc"    :inherit 'mode-line)
   (set-face-attribute 'powerline-inactive2 nil
                       :foreground "#444" :background "#bbb"    :inherit 'mode-line)
-
-  (when (fboundp 'powerline-my-theme)
-    (powerline-my-theme)))
+  )
 
 
-;;
 ;; flycheck関連
-;;
-(when (require 'flycheck nil t)
-  ;; flycheck-error-listのID欄の横幅を6->3に
-  (aset flycheck-error-list-format 4 '("ID" 3 t))
+(leaf flycheck
+  :ensure t dash pkg-info
+  :require let-alist seq
+  :doc "On-the-fly syntax checking"
+  :defvar (has-error-or-warnings)
 
-  ;; チェックに使わないチェッカーの既定値
-  ;; インストールされていない clang, cppcheck
-  ;; 日本語未対応の c/c++-gcc, デバッグ時に邪魔な emacs-lisp-checkdoc
-  (setq-default flycheck-disabled-checkers '(c/c++-clang
-                                             c/c++-cppcheck
-                                             c/c++-gcc
-                                             emacs-lisp-checkdoc))
+  :advice
+  ;; 上下のカーソル移動でc-modeのバッファを保存し、保存をトリガーにしたエラーチェックを行なう
+  ;; (advice-add 'next-line :after #'save-current-c-mode-buffer-if-modified)
+  (:after next-line     save-current-c-mode-buffer-if-modified)
+  ;; (advice-add 'previous-line :after #'save-current-c-mode-buffer-if-modified)
+  (:after previous-line save-current-c-mode-buffer-if-modified)
 
+  :hook
+  ;; エラーチェック直後に呼ばれるフック
+  ;; (add-hook 'flycheck-after-syntax-check-hook 'change-header-color)
+  ((flycheck-after-syntax-check-hook . change-header-color))
+
+  :mode-hook
+  (c-mode-common-hook . (
+                         ;; flycheckによる文法チェックを行なう
+                         (flycheck-mode t)
+                         ;; エラー・警告を別バッファーに一覧表示する
+                         (flycheck-list-errors)
+                         ))
+  
+  :custom
+  (
+   ;; 前回のコンパイルの結果を保存する
+   (has-error-or-warnings . nil)
+   ;; 自動チェックするトリガーを指定(モード切り替え、保存、改行入力)
+   (flycheck-check-syntax-automatically . '(mode-enabled save new-line)) ; 自動保存により idle-change は不要に
+   ;; エラーを表示する関数をエコー領域を使わないものに変更
+   (flycheck-display-errors-function . #'flycheck-display-error-messages-unless-error-list)
+
+   )
+
+  :setq-default
+  (
+   ;; 使わないチェッカー(未インストール: clang, cppcheck, 日本語未対応: c/c++gcc, 邪魔: emacs-lisp-checkdoc)
+   (flycheck-disabled-checkers . '(c/c++-clang c/c++-cppcheck c/c++-gcc emacs-lisp-checkdoc))
+  )
+
+  :preface
+  ;; 現在のバッファがc-modeで変更されているなら即座に保存する
+  (defun save-current-c-mode-buffer-if-modified (&rest _ingored)
+      "Immediately save current buffer if modified."
+      (when (and (buffer-modified-p)
+                 (eq major-mode 'c-mode)) 
+        ;; (message "Saved (save-current-c-mode-buffer-if-modified)")
+        (save-buffer)
+        ))
+  
+  :config
   ;; flycheckを日本語化されたgccのエラーメッセージにも対応させる
   ;; flycheckにマクロの存在を教えるためにはeval-when-compileが必要
-  (eval-when-compile
-    (defmacro flycheck-define-clike-checker (name command modes)
-      `(flycheck-define-checker ,(intern (format "%s" name))
-         ,(format "A %s checker using %s" name (car command)) ; quoted: (caadr command) orig: (car command)
-         :command (,@command source-inplace)
-         :error-patterns
-         ((info
-           line-start (or "<stdin>" (file-name))
-           ":" line (optional ":" column)
-           ": " (or "note" "備考") ": " (message) line-end)
+  (eval-when-compile 
+   (defmacro flycheck-define-clike-checker (name command modes)
+     `(flycheck-define-checker ,(intern (format "%s" name))
+        ,(format "A %s checker using %s" name (car command)) ; quoted: (caadr command) orig: (car command)
+        :command (,@command source-inplace)
+        :error-patterns
+        ((info
+          line-start (or "<stdin>" (file-name))
+          ":" line (optional ":" column)
+          ": " (or "note" "備考") ": " (message) line-end)
 
-          (warning
-           line-start (or "<stdin>" (file-name))
-           ":" line (optional ":" column)
-           ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
-           (optional "[" (id (one-or-more not-newline)) "]") line-end)
+         (warning
+          line-start (or "<stdin>" (file-name))
+          ":" line (optional ":" column)
+          ": " (or "warning" "警告") ": " (message (one-or-more (not (any "\n["))))
+          (optional "[" (id (one-or-more not-newline)) "]") line-end)
 
-          ;; リンカの出すエラーにも対応
-          (error
-           line-start
-           (or
-            ;; 通常のエラーメッセージ
-            (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
-                 (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
-            ;; リンカのエラーメッセージ
-            ;; 注意: line に数値をマッチさせないと flycheck-error-list に表示されない
-            ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示される
-            (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
-            )
-           ": " (message) line-end)
-          )
-         :modes ',modes)
-      ))
+         ;; リンカの出すエラーにも対応
+         (error
+          line-start
+          (or
+           ;; 通常のエラーメッセージ
+           (seq (or "<stdin>" (file-name)) ":" line (optional ":" column) ": "
+                (seq  (or "fatal error" "致命的エラー" "error" "エラー")))
+           ;; リンカのエラーメッセージ
+           ;; 注意: line に数値をマッチさせないと flycheck-error-list に表示されない
+           ;;       gccに-gオプションをつけて生成したオブジェクトなら行番号が表示されることが多い
+           (seq (optional (one-or-more (not (any ":"))) "/ld: ") (file-name) ":" line (optional ":" column))
+           )
+          ": " (message) line-end)
+         )
+        :modes ',modes)
+     ))
 
-  ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja)を定義
+  ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja, c-gcc-ja-with-ld)を定義
   ;; gccは -fsyntax-only ではチェックできないエラー・警告がある
-  ;; -O で初期化されていない自動変数をチェック可能になる
-  ;; -S でアセンブリファイルまで作成すると、いくつかのエラー・警告がチェック可能になる
-  ;; -o /dev/null でファイルは保存しないようにする
+  ;; さらにリンカまで実行しないとチェックできないエラーもある
+  ;;   -O で初期化されていない自動変数をチェック可能
+  ;;   -S でアセンブリファイル作成すると、いくつかのエラー・警告がチェック可能
+  ;;   -o /dev/null でファイルは保存しないようにする
+  ;;   -g でリンカのエラーメッセージにも行番号が付くことが多い
   (flycheck-define-clike-checker
    c-gcc-ja
-   ;; 旧EDUのgcc 4.8.5では、色付けしないための -fdiagnostics-plain-output オプションが使えない
+   ;; 旧EDUのgcc 4では、色付けしない -fdiagnostics-plain-output オプションが使えない
    ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
    ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
    c-mode)
 
-  ;; C言語用の日本語対応エラーチェッカー(c-gcc-ja-with-ld)を定義
-  ;; リンカまで実行しないとチェックできないエラーがある
-  ;; -g でリンカのエラーメッセージにも行番号が付く
-  ;; -o /dev/null でファイルは保存しないようにする
-  ;; コストを考えて、コンパイル時に c-gcc-ja では検出できなかったときだけ切り替えて使う
+  ;; リンカまで実行するエラーチェッカー。倍時間がかかるため、コンパイル時に c-gcc-ja で検出できなかったときに切り替える
   (flycheck-define-clike-checker
    c-gcc-ja-with-ld
-   ;; 旧EDUのgcc 4.8.5では、色付けしないための -fdiagnostics-plain-output オプションが使えない
+   ;; 旧EDUのgcc 4では、色付けしない -fdiagnostics-plain-output オプションが使えない
    ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
    ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
    c-mode)
 
-
   ;; c-gcc-jaのみチェッカーとして登録
   (add-to-list 'flycheck-checkers 'c-gcc-ja)
 
-  ;; エラーを表示する関数をエコー領域を使わないものに変更
-  (setq flycheck-display-errors-function #'flycheck-display-error-messages-unless-error-list)
-
-  ;; 自動チェックするトリガーを指定
-  (setq flycheck-check-syntax-automatically
-        '(
-          mode-enabled
-          save                            ; 自動保存にも連動
-          new-line                        ; auto-completeと併用するときは無効にすること
-          ;; idle-change
-          ))
-
-  (advice-add 'next-line :after #'save-current-c-mode-buffer-if-modified)
-  (advice-add 'previous-line :after #'save-current-c-mode-buffer-if-modified)
-
-  ;; カレントバッファーのCソースコードが変更されていたら保存する
-  (eval-when-compile
-    (defun save-current-c-mode-buffer-if-modified (&rest _ingored)
-      "Immediately save current buffer if modified."
-      (when (and (buffer-modified-p)
-                 (eq major-mode 'c-mode)) 
-        (message "saved (next-line-after)")
-        (save-buffer)
-        )))
-
-  ;; エラー・警告・備考のフェイス設定
-  (set-face-foreground 'flycheck-error "white")
-  (set-face-background 'flycheck-error (if (available-truecolor-p) "red" "color-196"))
-  (set-face-attribute 'flycheck-error nil :underline nil :weight 'bold)
-
-  (set-face-foreground 'flycheck-warning "black")
-  (set-face-background 'flycheck-warning (if (available-truecolor-p) "#ffaf00" "color-214"))
-  (set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
-
-  (set-face-foreground 'flycheck-info "lightblue")
-
-  ;; 前回のコンパイルの結果を保存する
-  (defvar has-error-or-warnings nil)
-
-  ;; エラーチェック直後に呼ばれるフック
-  (add-hook 'flycheck-after-syntax-check-hook
-            'change-header-color)
-
-  (defun change-header-color () 
+  (defun change-header-color ()
     ;; バッファが隠れている可能性もあるので必要
     (flycheck-list-errors)
     ;; エラー・警告の有無に応じてヘッダー行の背景色を変える
@@ -666,204 +886,329 @@ VERBOSE: insert messages to *scratch* if non-nil.
                                  :background header-line-background))
       )
     )
+  
+  :defer-config
+  ;; flycheck-error-listのID欄の横幅を6->3に
+  (aset flycheck-error-list-format 4 '("ID" 3 t))
+  
+  ;; エラー・警告・備考のフェイス設定
+  (set-face-foreground 'flycheck-error "white")
+  (set-face-background 'flycheck-error (if (available-truecolor-p) "red" "color-196"))
+  (set-face-attribute 'flycheck-error nil :underline nil :weight 'bold)
+
+  (set-face-foreground 'flycheck-warning "black")
+  (set-face-background 'flycheck-warning (if (available-truecolor-p) "#ffaf00" "color-214"))
+  (set-face-attribute 'flycheck-warning nil :underline nil :weight 'bold)
+
+  (set-face-foreground 'flycheck-info "lightblue")
+
+  
   )
 
-;;
+
+;; beacon関連
+(leaf beacon
+  :ensure t
+  :disabled nil
+  :custom
+  ((beacon-color              . "#aa3400")
+   (beacon-size               . 64)
+   (beacon-blink-when-focused . t)
+   (beacon-blink-when-window-scrolls . nil)
+   )
+  :custom-face
+  `((beacon-fallback-background . '((t (:background "#556b2f")))))
+  :config
+  (beacon-mode 1)
+  )
+
+
 ;; display-buffer-alist関連
-;;
-;; エラーを一覧表示するバッファー用の定義
-(add-to-list 'display-buffer-alist
-             `(,(rx bos "*Flycheck errors*" eos)
-               (display-buffer-reuse-window
-                display-buffer-in-side-window)
-               (side            . bottom)
-               (reusable-frames . visible)
-               (window-height   . 0.33)))
+(leaf *display-buffer
+  :doc "policy of buffer selection"
+  :config
+  ;; エラーを一覧表示するバッファー用の定義
+  (add-to-list 'display-buffer-alist
+               `(,(rx bos "*Flycheck errors*" eos)
+                 (display-buffer-reuse-window
+                  display-buffer-in-side-window)
+                 (side            . bottom)
+                 (reusable-frames . visible)
+                 (window-height   . 0.33)))
 
-;; コンパイル結果を表示するバッファー用の定義
-(add-to-list 'display-buffer-alist
-             `(,(rx bos "*compilation*" eos)
-               (display-buffer-reuse-window
-                display-buffer-in-side-window)
-               (side            . bottom)
-               (reusable-frames . visible)
-               (window-height   . 0.33)))
+  ;; コンパイル結果を表示するバッファー用の定義
+  (add-to-list 'display-buffer-alist
+               `(,(rx bos "*compilation*" eos)
+                 (display-buffer-reuse-window
+                  display-buffer-in-side-window)
+                 (side            . bottom)
+                 (reusable-frames . visible)
+                 (window-height   . 0.33)))
 
-;; シェルバッファー用の定義
-(add-to-list 'display-buffer-alist
-             `(,(rx bos "*shell*" eos)
-               (display-buffer-reuse-window
-                display-buffer-in-side-window)
-               (side            . bottom)
-               (reusable-frames . visible)
-               (window-height   . 0.33)))
+  ;; シェルバッファー用の定義
+  (add-to-list 'display-buffer-alist
+               `(,(rx bos "*shell*" eos)
+                 (display-buffer-reuse-window
+                  display-buffer-in-side-window)
+                 (side            . bottom)
+                 (reusable-frames . visible)
+                 (window-height   . 0.33)))
+  
+  )
 
 
-;;
-;; C言語のソースファイルを表示するバッファー限定の設定
-;;
-(require 'cc-mode)
-;; autoinsertのために(c-mode-common-hookでではなく)ここで設定すること
-;; 字下げなどの形式を講義のプリントと同じ(K&R形式)にする
-;; 字下げの単位は4文字にする
-(setq-default c-default-style "k&r"
-              c-basic-offset 4)
+;; cc-mode関連
+(leaf cc-mode
+  :doc "major mode for editing C and similar languages"
+  :tag "builtin"
+  :defvar (c-basic-offset c-cleanup-list)
+  :commands c-toggle-comment-style
+  :preface
+  :defvar (my-header-line-format) 
+  :custom-face
+  :bind
+  (c-mode-base-map
+   ;; Enterキーによる挿入行を字下げする
+   ("C-m" . c-context-line-break)
+   )
+  :mode-hook
+  (c-mode-common-hook . (
+                         (face-remap-add-relative 'header-line
+                                                  :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
+                                                  :background (if (available-truecolor-p) "#87afff" "color-111"))
 
-;;
+
+                         ;; 字下げなどの形式を講義のプリントと同じ(K&R形式)にする
+                         (c-set-style "k&r")
+                         ;; 字下げの単位は4文字にする
+                         (setq c-basic-offset 4)
+                         ;; バックアップファイルを作らない
+                         (setq-local make-backup-files nil)
+                         ;; 字下げはスペースだけで行う(タブ文字を使わない)
+                         (setq indent-tabs-mode nil)
+                         ;; 「else」と「else if」は、直前の「}」と同じ行にくっつける
+                         (setq c-cleanup-list
+                               '(brace-else-brace
+                                 brace-elseif-brace
+                                 defun-close-semi)
+                               )
+                         ;; コマンドによるコメントは//を使う
+                         (c-toggle-comment-style -1)
+
+                         ;; 先頭をヘッダーラインにする
+                         (setq-local my-header-line-format
+                                     (concat "       "
+                                             "F5:変換実行 F6:上下移動 F7:開く F8:表示切替 F9:再起動"
+                                             (when (string= (getenv "TERM_PROGRAM") "WezTerm")
+                                               " (C|S|A-F10〜12:外見変更)")))
+                         (setq header-line-format my-header-line-format)
+
+                         ))
+  )
+
+
 ;; smartparens関連
-;;
-(when (require 'smartparens nil t)
-  (require 'smartparens-config)
+(leaf smartparens
+  :doc "Automatic insertion, wrapping and paredit-like navigation with user defined pairs"
+  :ensure t dash
+  :mode-hook
+  (c-mode-common-hook . (
+                         ;; smartparensによるカッコ組入力を行なう
+                         (smartparens-mode t)
+                         ;; smartparensによる色付けを行わない
+                         (turn-off-show-smartparens-mode)))
 
+  :setq-default
+  (
+   ;; smartparensの()や{}内入力時の色付けをなくす
+   (sp-highlight-pair-overlay . nil)
+   )
+  :require smartparens-config
+  :advice-remove
+  ;; (advice-remove 'delete-backward-char #'sp-delete-pair-advice)
+  (delete-backward-char sp-delete-pair-advice)
+
+  :bind
+  (smartparens-mode-map
+   ;; smartparensのparedit風操作のキー割り当て(c-modeでは無効)
+   ("C-<right>" . (lambda () (interactive) (unless (eq major-mode 'c-mode) (sp-forward-slurp-sexp))))
+   ("C-<left>"  . (lambda () (interactive) (unless (eq major-mode 'c-mode) (sp-forward-barf-sexp))))
+   ("M-r"       . (lambda () (interactive) (unless (eq major-mode 'c-mode) (sp-raise-sexp))))
+   ("M-s"       . (lambda () (interactive) (unless (eq major-mode 'c-mode) (sp-splice-sexp))))
+   ("C-<up>"    . sp-splice-sexp-killing-backward) ; lambdaで包むと動かない??
+   ("M-<right>" . sp-select-next-thing)
+   )
+
+  :preface
   ;; {}入力後にEnterキーでインデントした空行を展開
-  (declare-function sp-local-pair "smartparens" (p1 p2 p3 p4 p5))
-  (sp-local-pair 'c-mode "{" nil :post-handlers '((my-create-newline-and-enter-sexp "RET")))
-
   (defun my-create-newline-and-enter-sexp (&rest _ignored)
-    "Open a new brace or bracket expression, with relevant newlines and indent. "
+    "Open a new brace or bracket expression, with relevant newlines and indent."
     (newline)
     (indent-according-to-mode)
     (forward-line -1)
     (indent-according-to-mode))
 
-  ;; smartparensの()や{}内入力時の色付けをなくす
-  (setq-default sp-highlight-pair-overlay nil)
-
-  ;; smartparensのparedit風操作のキー割り当て
-  (define-key smartparens-mode-map (kbd "C-<right>") 'sp-forward-slurp-sexp)
-  (define-key smartparens-mode-map (kbd "C-<left>") 'sp-forward-barf-sexp)
-  (define-key smartparens-mode-map (kbd "M-r") 'sp-raise-sexp)
-  (define-key smartparens-mode-map (kbd "M-s") 'sp-splice-sexp)
-  (define-key smartparens-mode-map (kbd "C-<up>") 'sp-splice-sexp-killing-backward)
-  (define-key smartparens-mode-map (kbd "M-<right>") 'sp-select-next-thing)
-
-  ;; smartparensのカッコ削除用アドバイスを除去
-  (declare-function sp-delete-pair-advice "smartparens" nil)
-  (advice-remove 'delete-backward-char #'sp-delete-pair-advice)
-  ;; smartparensの色付けを無効にする
+  :config
+  (sp-local-pair 'c-mode "{" nil :post-handlers '((my-create-newline-and-enter-sexp "RET")))
+  ;; 表示はshow-paren-modeまかせ
   (show-smartparens-global-mode nil)
 
   )
 
-;; フック
-;; TODO: モードごとに分けて記述
-(add-hook
- 'c-mode-common-hook
- (lambda ()
-   ;; F8キーとCtrl-C nとCtrl-C 8に、「行番号/ヘッダー表示の切り替え」を割り当て
-   (define-key c-mode-map (kbd "<f8>") 'toggle-line-numbers-and-header)
-   (define-key c-mode-map (kbd "C-c n") 'toggle-line-numbers-and-header)
-   (define-key c-mode-map (kbd "C-c 8") 'toggle-line-numbers-and-header)
+;; real-auto-save関連
+(leaf real-auto-save
+  :doc "Automatically save your buffers/files at regular intervals"
+  :ensure t
+  :custom
+  (((real-auto-save-interval . 2)))
+  :hook
+  (c-mode-common-hook . real-auto-save-mode)
+  
+  )
 
-   ;; 先頭をヘッダーラインにする
-   (defvar my-header-line-format
-               (concat "       "
-                       "F5:変換実行 F6:上下移動 F7:開く F8:表示切替 F9:再起動"
-                       (when (string= (getenv "TERM_PROGRAM") "WezTerm")
-                         " (C|S|A-F10〜12:外見変更)")))
-   (setq header-line-format my-header-line-format)
-   
-   (face-remap-add-relative 'header-line
-                            :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
-                            :background (if (available-truecolor-p) "#87afff" "color-111"))
 
-   ;;
-   ;; show-paren-mode関連
-   ;;
-   ;; c-mode限定で対応するカッコの強調を行なう
-   (if (fboundp 'show-paren-local-mode)
-       (show-paren-local-mode t)
-     (setq-local show-paren-mode t))
+;; compile関連
+(leaf compile
+  :doc "run compiler as inferior of Emacs, parse error messages"
+  :tag "builtin"
+  :defvar (my-command my-compiled-source-buffer)
+  
+  :custom
+  ;; 実行形式への変換に使うコマンドの確認(最下行に表示してEnterキー)をしない
+  (compilation-read-command . nil)
+  ;; 実行形式への変換前にソースファイルを(質問なしで)自動保存する
+  (compilation-ask-about-save . nil)
+  ;; 実行形式への変換後、最初のエラーにポイント(カーソル)を移動させる
+  (compilation-auto-jump-to-first-error . t)
+  ;; 直前に save-and-compile で実行形式に変換されたプログラムのコマンド名(先頭に"./"付き)
+  (my-command . "")
+  ;; 直前に save-and-compile で実行形式に変換されたプログラムのバッファ
+  (my-compiled-source-buffer . nil)
 
-   ;; 対応するカッコのみを強調
-   (custom-set-variables '(show-paren-style 'parenthesis))
+  :config
+  ;; 編集中のC言語のソースファイルを実行形式に変換する
+  (defun save-and-compile ()
+    (interactive)
+    (cond ((or (eq buffer-file-name nil)
+               (not (string= (file-name-extension buffer-file-name t) ".c")))
+           ;; 現在のバッファーはC言語のソースファイルではない
+           (when (string= (buffer-name) "*shell*")
+             ;; shellにいるならコマンド名を挿入
+             (shell-and-insert))
+           )
+          ;; 現在のバッファーはC言語のソースファイル
+          (t
+           ;; コンパイル対象のバッファ名
+           (setq my-compiled-source-buffer (buffer-name))
+           ;; ファイル全体のインデントを整える
+           (indent-whole-file)
+           ;; (変更されていれば)問答無用で保存
+           (save-buffer)
+           ;; flycheckによるエラーチェックの結果を更新
+           (when (flycheck-mode)
+             ;; ウィンドウ分割していなくても、チェック後に自動分割される
+             ;; flycheck-after-syntax-check-hook を参照
+             (flycheck-buffer)
+             ;; flycheckのエラーチェック終了まで待つ
+             (while (flycheck-running-p)
+               (sit-for 0.125))
+             )
 
-   ;; 全角スペース"　"などの外見を変更
-   (face-remap-add-relative 'nobreak-space
-                    :foreground "black"
-                    :background "pink"
-                    :underline  nil)
-
-   ;;
-   ;; display-line-numbers-mode関連
-   ;;
-   (when (fboundp 'display-line-numbers-mode)
-     (display-line-numbers-mode t))
-
-   ;;
-   ;; c-mode (cc-mode)関連
-   ;;
-   ;; 字下げはスペースだけで行う(タブ文字を使わない)
-   (setq indent-tabs-mode nil)
-   ;; Enterキーによる挿入行を字下げする
-   (define-key c-mode-base-map "\C-m" 'c-context-line-break)
-   ;; BackspaceキーやCtrl-Dキーで複数のスペース・改行を一括削除し、
-   ;; (c-toggle-hungry-state 1)
-   ;; 「;」や「}」を入力すると自動的に改行する
-   ;; (c-toggle-auto-newline 1)
-   ;; 「else」と「else if」は、直前の「}」と同じ行にくっつける
-   (setq c-cleanup-list
-         '(brace-else-brace
-           brace-elseif-brace
-           defun-close-semi)
-         )
-   ;; コマンドによるコメントは//を使う
-   (c-toggle-comment-style -1)
-
-   ;;
-   ;; compile関連
-   ;;
-   (custom-set-variables
-    ;; 実行形式への変換に使うコマンドの確認(最下行に表示してEnterキー)をしない
-    '(compilation-read-command nil)
-    ;; 実行形式への変換前にソースファイルを(質問なしで)自動保存する
-    '(compilation-ask-about-save nil)
-    ;; 実行形式への変換後、最初のエラーにポイント(カーソル)を移動させる
-    '(compilation-auto-jump-to-first-error t)
+           (let
+               ;; TODO: カレントディレクトリが~/でないときの処理
+               ((file-base (shell-quote-argument (file-name-base buffer-file-name)))
+                (file-name (shell-quote-argument (file-name-nondirectory buffer-file-name))))
+             ;; 後で実行するときのコマンド名
+             (setq my-command (format "./%s" file-base))
+             ;; コンパイルコマンドにファイル名などを埋め込む
+             (set (make-local-variable 'compile-command)
+                  (format "gcc -Wall -Wextra -std=gnu11 -lm -g -O -o%s %s" file-base file-name))
+             ;; コンパイルを実行。画面が自動分割されて変換結果が表示される
+             ;; コンパイル完了後はswitch-compilation-bufferが呼び出されてflycheck-errors-listに切り替わる
+             (compile (eval compile-command))
+            
+             )
+           )
+          )
     )
 
-   ;; 実行形式への変換後、エラー(と思われる)範囲をハイライト表示する秒数
-   ;; flycheck が同様の処理をするので設定しない
-   ;; (setq next-error-highlight 5)
-
-   ;;
-   ;; real-auto-save関連
-   ;;
-   (when (require 'real-auto-save nil t)
-     (real-auto-save-mode)
-     (custom-set-variables '(real-auto-save-interval 2))
+  ;; 現在のポイントにコマンド名を挿入
+  (defun insert-my-command-at-end ()
+    ;; バッファー末尾に移動して
+    (goto-char (point-max))
+    (cond
+     ;; ポイントより前にコマンド名の長さ分の文字列がなければ
+     ((< (point) (length my-command))
+      ;; そのままコマンド名を挿入する
+      (insert my-command))
+     ;; 以下、コマンド名の多重挿入を避けるための処理
+     (t
+      ;; ポイント直前のコマンド名の長さ分の文字列を切り出し
+      (let ((prev-str (buffer-substring-no-properties
+                       (point) (- (point) (length my-command))))
+            )
+        ;; ポイント直前の文字列がコマンド名と同じでなければ
+        (when (not (string= prev-str my-command))
+          ;; コマンド名を挿入する
+          (insert my-command))
+        )
+      )
      )
+    )
 
-   ;;
-   ;; flycheck関連
-   ;;
-   ;; flycheckによる文法チェックを行なう
-   (flycheck-mode t)
-   ;; エラー・警告を別バッファーに一覧表示する
-   (flycheck-list-errors)
+  ;; 実行画面(*shell*バッファー)の末尾にコマンド名を挿入
+  (defun shell-and-insert ()
+    (interactive)
+    (cond
+     ((eq buffer-file-name nil)
+      ;; ファイルバッファー以外にいる
+      (shell)
+      ;; Emacs終了時にこのシェルが実行中でも問い合わせしない
+      (set-process-query-on-exit-flag (get-process "shell") nil)
+      (insert-my-command-at-end)
+      )
+     (t
+      ;; ファイルバッファーにいる
+      (let ((file-ext (file-name-extension buffer-file-name t))
+            (file-base (shell-quote-argument (file-name-base buffer-file-name)))
+            )
+        (when (string= file-ext ".c")
+          ;; Cのソースファイルのバッファーにいる
+          ;; 実行形式に変換後のコマンド名を設定
+          (setq my-command (format "./%s" file-base))
+          ;; 画面分割されていなければ、分割する
+          (when (one-window-p)
+            (split-window))
+          ;; 別ウィンドウにポインター(カーソル)を移す
+          (other-window 1)
+          ;; シェルを実行中でなければ実行し、現在のウィンドウに表示
+          ;; すでに実行中なら現在のウィンドウに表示(バッファー切り替え)
+          (shell)
+          ;; Emacs終了時にこのシェルが実行中でも問い合わせしない
+          (set-process-query-on-exit-flag (get-process "shell") nil)
+          ;; バッファー末尾にコマンド名を挿入
+          (insert-my-command-at-end))))
+     )
+    )
 
-   ;;
-   ;; smartparens関連
-   ;;
-   ;; smartparensによるカッコ組入力を行なう
-   (smartparens-mode t)
-   ;; smartparensによる色付けを行わない
-   (turn-off-show-smartparens-mode)
+  
+  )
 
-   ;; 全角スペース"　"などの外見を変更
-   (when (fboundp 'whitespace-mode)
-     (whitespace-mode t))
 
-   ;; バックアップファイルを作らない
-   ;;
-   (setq-local make-backup-files nil)
-   )
- nil nil)
-
-;;
 ;; autoinsert関連
-;;
-(when (require 'autoinsert nil t)
+(leaf autoinsert
+  :doc "automatic mode-dependent insertion of text into new files"
+  :tag "builtin"
+  :pre-setq
+  :custom
+  (
+   ;; テンプレートを使うかどうかの質問をしない(常に使う)
+   (auto-insert-query . nil)
+   ;; テンプレートのリストをクリア
+   (auto-insert-alist . nil)
+
+   )
+  :config
   ;; ファイルを新規作成する際にテンプレートを利用する
   (add-to-list 'find-file-not-found-functions
                #'(lambda ()
@@ -872,12 +1217,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
                    (set-buffer-modified-p t)
                    ))
 
-  ;; テンプレートを使うかどうかの質問をしない(常に使う)
-  (custom-set-variables '(auto-insert-query nil))
-
-  ;; テンプレートのリストをクリア
-  (custom-set-variables '(auto-insert-alist nil))
-
+  
   ;; C言語用テンプレートを設定
   (define-auto-insert
     '("\\.c$" . "C template")
@@ -896,6 +1236,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
     [("Bash profile template: "
       "export LANG=ja_JP.UTF-8\n"
       "export PATH=/snap/emacs/current/usr/bin:$PATH\n"
+      "export HISTCONTROL=ignoreboth\n"
       "source ~/.bashrc\n"
       "if [[ \"$TERM\" = 'xterm-256color--wezterm' ]]; then\n" 
       "\texport TERM=xterm-256color\n"
@@ -907,161 +1248,16 @@ VERBOSE: insert messages to *scratch* if non-nil.
       "\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PORT\" $(echo -n $SSH_CONNECTION | cut -d' ' -f 4 | base64)\n"
       "fi\n"
       )])
-
   )
+
 
 ;; 
 ;; 自作コマンドと関数
 ;; 
 
-;; 直前に save-and-compile で実行形式に変換されたプログラムのコマンド名(先頭に"./"付き)
-(defvar my-command "")
-;; 直前に save-and-compile で実行形式に変換されたプログラムのバッファ
-(defvar my-compiled-source-buffer nil)
 
-;;
-;; 編集中のC言語のソースファイルを実行形式に変換する
-;;
-(defun save-and-compile ()
-  (interactive)
-  (cond ((or (eq buffer-file-name nil)
-             (not (string= (file-name-extension buffer-file-name t) ".c")))
-         ;; 現在のバッファーはC言語のソースファイルではない
 
-         (when (string= (buffer-name) "*shell*")
-           ;; shellにいるならコマンド名を挿入
-           (shell-and-insert))
-         )
-        (t
-         ;; コンパイル対象のバッファ名
-         (setq my-compiled-source-buffer (buffer-name))
-         
-         ;; ファイル全体のインデントを整える
-         (indent-whole-file)
 
-         ;; (変更されていれば)問答無用で保存
-         (save-buffer)
-
-         ;; flycheckによるエラーチェックの結果を更新
-         (when (flycheck-mode)
-           ;; ウィンドウ分割していなくても、チェック後に自動分割される
-           ;; flycheck-after-syntax-check-hook を参照
-           (flycheck-buffer)
-           ;; flycheckのエラーチェック終了まで待つ
-           (while (flycheck-running-p)
-             (sit-for 0.125))
-           )
-
-         (let
-             ((file-base (shell-quote-argument (file-name-base buffer-file-name)))
-              (file-name (shell-quote-argument (file-name-nondirectory buffer-file-name))))
-           ;; 後で実行するときのコマンド名
-           (setq my-command (format "./%s" file-base))
-           ;; コンパイルコマンドにファイル名などを埋め込む
-           (set (make-local-variable 'compile-command)
-                (format "gcc -Wall -Wextra -std=gnu11 -lm -g -O -o%s %s"
-                        file-base
-                        file-name
-                        ))
-           ;; コンパイルを実行。画面が自動分割されて変換結果が表示される
-           ;; コンパイル完了後はswitch-compilation-bufferが呼び出されてflycheck-errors-listに切り替わる
-           (compile (eval compile-command))
-
-           
-           ))))
-
-;; 
-;; 別ウィンドウ(または別バッファー)の選択
-;;
-(defun other-window-or-buffer ()
-  (interactive)
-  (if (one-window-p)
-      ;; ウィンドウが分割されていなければ、バッファを切り換える
-      (switch-to-buffer (other-buffer))
-    ;; 非ファイルバッファーから別のウィンドウに移動するときはflycheck-errorsに切り替える
-    (when (eq buffer-file-name nil)
-      (switch-window-buffer-to-flycheck-errors-from (buffer-name)))
-    ;; ウィンドウが分割されていれば、別ウィンドウを選択する
-    (other-window 1))
-  )
-
-;;
-;; マウス操作で*shell*や*compilation*バッファからソースコードに切り替えた時に*Flycheck errors*を表示
-;;
-(advice-add 'mouse-set-point :before #'mouse-set-point-before)
-(advice-add 'mouse-set-point :after #'mouse-set-point-after)
-
-(defvar my-prev-buffer-name)
-
-(defun mouse-set-point-before (&rest _ignored)
-  (setq my-prev-buffer-name (buffer-name)))
-
-(defun mouse-set-point-after (&rest _ignored)
-  (unless (string= my-prev-buffer-name (buffer-name))
-    ;; (message (concat "mouse-set-pointアドバイス実行中: " my-prev-buffer-name "->" (buffer-name)))
-    (when (and (or (string= my-prev-buffer-name "*shell*")
-                   (string= my-prev-buffer-name "*compilation*"))
-               (and (not (eq buffer-file-name nil))
-                    (string= (file-name-extension buffer-file-name t) ".c")))
-      (switch-window-buffer-to-flycheck-errors-from my-prev-buffer-name))))
-
-;;
-;; 現在のポイントにコマンド名を挿入
-;;
-(defun insert-my-command-at-end ()
-  ;; バッファー末尾に移動して
-  (goto-char (point-max))
-  ;; ポイントより前にコマンド名の長さ分の文字列がなければ
-  (cond
-   ((< (point) (length my-command))
-    ;; コマンド名を挿入する
-    (insert my-command))
-   (t
-    ;; 以下、コマンド名の多重挿入を避けるための処理
-    ;; ポイント直前のコマンド名の長さ分の文字列を切り出し
-    (let ((prev-str (buffer-substring-no-properties
-                     (point) (- (point) (length my-command))))
-          )
-      ;; ポイント直前の文字列がコマンド名と同じでなければ
-      (when (not (string= prev-str my-command))
-        ;; コマンド名を挿入する
-        (insert my-command))))))
-
-;;
-;; 実行画面(*shell*バッファー)の末尾にコマンド名を挿入
-;;
-(defun shell-and-insert ()
-  (interactive)
-  (cond
-   ((eq buffer-file-name nil)
-    ;; ファイルバッファー以外にいる
-    (shell)
-    ;; Emacs終了時にこのシェルが実行中でも問い合わせしない
-    (set-process-query-on-exit-flag (get-process "shell") nil)
-    (insert-my-command-at-end)
-    )
-   (t
-    ;; ファイルバッファーにいる
-    (let ((file-ext (file-name-extension buffer-file-name t))
-          (file-base (shell-quote-argument (file-name-base buffer-file-name)))
-          )
-      (when (string= file-ext ".c")
-        ;; Cのソースファイルのバッファーにいる
-        ;; 実行形式に変換後のコマンド名を設定
-        (setq my-command (format "./%s" file-base))
-        ;; 画面分割されていなければ、分割する
-        (when (one-window-p)
-          (split-window))
-        ;; 別ウィンドウにポインター(カーソル)を移す
-        (other-window 1)
-        ;; シェルを実行中でなければ実行し、現在のウィンドウに表示
-        ;; すでに実行中なら現在のウィンドウに表示(バッファー切り替え)
-        (shell)
-        ;; Emacs終了時にこのシェルが実行中でも問い合わせしない
-        (set-process-query-on-exit-flag (get-process "shell") nil)
-        ;; バッファー末尾にコマンド名を挿入
-        (insert-my-command-at-end))))
-   ))
 
 
 ;;
@@ -1137,18 +1333,6 @@ VERBOSE: insert messages to *scratch* if non-nil.
 (add-to-list 'compilation-finish-functions
              'switch-compilation-buffer)
 
-;;
-;; 指定した番号(通常は2桁)を持つ演習用プログラム「progXX.c」を開く
-;;
-(defun find-practice-file (number)
-  "指定した番号(通常は2桁)を持つ演習用プログラム「progXX.c」を開く"
-  (interactive "nProgram Number: ")
-  (let ((file-name (format "~/prog%02d.c" number))
-        )
-    (when (eq buffer-file-name nil)
-      (other-window 1))
-    (find-file file-name)
-    ))
 
 ;;
 ;; 現在のファイル全体をインデントする
@@ -1164,24 +1348,6 @@ VERBOSE: insert messages to *scratch* if non-nil.
         (indent-region (point-min) (point-max))
         ))))
 
-;;
-;; 行番号とヘッダー行の表示をトグルする
-;;
-(defun toggle-line-numbers-and-header ()
-  (interactive)
-  ;; 行番号はいつでもトグル
-  (when (fboundp 'display-line-numbers-mode)
-    (call-interactively 'display-line-numbers-mode))
-  
-  ;; my-header-line-formatが存在する場合のみヘッダー行をトグル
-  (when (boundp 'my-header-line-format)
-    (if (eq header-line-format nil)
-        (when (eq display-line-numbers nil)
-          (setq header-line-format my-header-line-format))
-      (when (eq display-line-numbers nil)
-        (setq header-line-format nil))))
-  )
-
 ;; emacs-lisp-mode用の設定
 (add-hook 'emacs-lisp-mode-hook 'setup-development-packages)
 
@@ -1189,6 +1355,9 @@ VERBOSE: insert messages to *scratch* if non-nil.
   "Set up development packages"
   (interactive)
 
+  (when (require 'leaf-tree nil t)
+    (global-set-key (kbd "M-t") 'leaf-tree-mode))
+  
   (when (require 'smartparens nil t)
     (smartparens-strict-mode t)
     (turn-off-show-smartparens-mode))
@@ -1197,25 +1366,13 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (global-set-key (kbd "C-s") 'swiper))
 
   (when (require 'counsel nil t)
-    (global-set-key (kbd  "M-x") 'counsel-M-x))
+    (global-set-key (kbd "M-x") 'counsel-M-x)
+    (global-set-key (kbd "M-i") 'counsel-imenu)
+    (global-set-key (kbd "C-x C-b") 'counsel-ibuffer)
+    )
 
   (when (require 'highlight-defined nil t)
     (highlight-defined-mode t))
-
-  (when (require 'paren nil t)
-    (if (fboundp 'show-paren-local-mode)
-        (show-paren-local-mode t)
-      (setq-local show-paren-mode t))
-
-    (custom-set-variables '(show-paren-style 'expression)
-                          '(show-paren-when-point-inside-paren t)
-                          ;; '(show-paren-when-point-in-periphery t)
-                          )
-
-    (face-remap-add-relative 'show-paren-match
-                             'my-paren-match-remap-style
-                             )
-    )
 
   (when (require 'bm nil t)
     (global-set-key (kbd "<f2>") 'bm-next)
@@ -1226,8 +1383,8 @@ VERBOSE: insert messages to *scratch* if non-nil.
     )
 
   ;; 全角スペース"　"などの外見を変更
-  (when (fboundp 'whitespace-mode)
-    (whitespace-mode t))
+  ;; (when (fboundp 'whitespace-mode)
+  ;;   (whitespace-mode t))
 
   (setq indent-tabs-mode nil)
   )
@@ -1236,19 +1393,22 @@ VERBOSE: insert messages to *scratch* if non-nil.
 ;;
 ;; 再起動関連
 ;;
-(when (and (require 'restart-emacs nil t)
-           (require 'desktop))
-  ;; 再起動時に端末をクリアする
-  (eval-when-compile
-    (defun my-restart-emacs (&optional args)
-      "Start Emacs in current terminal (modified)."
-      (suspend-emacs (format "fg ; clear ; %s %s -nw"
-                             (shell-quote-argument (restart-emacs--get-emacs-binary))
-                             (restart-emacs--string-join (mapcar #'shell-quote-argument
-                                                                 args)
-                                                         " ")))))
-  ;; 元の関数を置き換える
-  (advice-add 'restart-emacs--start-emacs-in-terminal :override #'my-restart-emacs)
+(leaf restart-emacs
+  :doc "restart emacs from within emacs"
+  :ensure t
+  :require desktop
+  :advice
+  ;; (advice-add 'restart-emacs--start-emacs-in-terminal :override #'my-restart-emacs)
+  (:override restart-emacs--start-emacs-in-terminal my-restart-emacs)
+
+  :preface
+  (defun my-restart-emacs (&optional args)
+    "Start Emacs in current terminal (modified)."
+    (suspend-emacs (format " fg ; clear ; %s %s -nw"
+                           (shell-quote-argument (restart-emacs--get-emacs-binary))
+                           (restart-emacs--string-join (mapcar #'shell-quote-argument
+                                                               args)
+                                                       " "))))
 
   ;; 現在開いているバッファの状態を保存してEmacsを再起動する
   (defun desktop-save-and-restart-emacs ()
@@ -1257,15 +1417,20 @@ VERBOSE: insert messages to *scratch* if non-nil.
     (desktop-save "~")
     (restart-emacs)
     )
-
-  ;; emacs-restartによる再起動後なら、開いていたバッファーを再現
+  
+  :config
+  ;; emacs-restartによる再起動後なら、開いていたバッファを再現
   (when (file-exists-p "~/.emacs.desktop")
     (desktop-read "~")
     (delete-file "~/.emacs.desktop")
-    (message "Emacsを再起動してバッファーを復元しました"))
+    (message "Emacsを再起動してバッファを復元しました"))
+
   )
 
-(when (eq window-system 'x)
+(leaf *window-system-settings
+  :doc "settings for window-system"
+  :when (window-system)
+  :config
   (set-face-attribute 'default nil
                       :family "UDEV Gothic NF"
                       :height 136)
@@ -1278,6 +1443,5 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (set-fontset-font (frame-parameter nil 'font)
                     'katakana-jisx0201
                     (cons "UDEV Gothic NF" "iso10646-1"))
-)
-
-
+  
+  )
