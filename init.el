@@ -1,8 +1,13 @@
 ;;; init.el --- Emacs init file for EDU system (logos). -*- lexical-binding: t; -*-
+
 ;;; Commentary:
 ;; Edu(logos)用のinit.el
-;; ~/.emacs.dに置くこと
+
 ;;; Code:
+
+(require 'cl-lib)
+(eval-and-compile
+  (defvar in-development t))
 
 ;; -lオプションで指定した/バイトコンパイルする設定ファイルにuser-emacs-directoryを合致させる
 (eval-and-compile
@@ -11,7 +16,76 @@
           (expand-file-name
            (file-name-directory (or load-file-name byte-compile-current-file))))))
 
-(require 'cl-lib)
+
+;; 軽量バッファーモード
+(defun lightweight-buffer-mode ()
+  "Lightweight Buffer Mode for novice."
+  (interactive)
+  (setq mode-name "Lightweight Buffer")
+  (setq major-mode 'lightweight-buffer-mode)
+  (run-hooks 'lightweight-buffer-mode-hook))
+
+
+;; パッケージインストール時に*scratch*にパッケージ名を表示
+(defun print-package-name-in-scrach-buffer (pkg &optional dont-select)
+    (with-current-buffer (get-buffer "*scratch*")
+      (insert (format "%sパッケージを導入中\n" pkg))
+      (redisplay))
+  )
+
+;;
+;; 起動処理後の表示をフック
+;;
+(if (version< emacs-version "27.0")
+  (with-current-buffer (get-buffer "*scratch*")
+    (insert "Emacsのバージョンが古くて動きません。\n"
+            "新しいEmacsを優先起動する設定の.bash_profileを作っていないのでは。\n\n")
+    )
+
+  (advice-add 'package-install :before #'print-package-name-in-scrach-buffer)
+
+  ;;(advice-add 'command-line-1 :after #'display-notes)
+  (add-hook 'emacs-startup-hook #'display-notes)
+  )
+
+(defun display-notes (&rest _ignored)
+  ;; *scratch*に起動後の注意書きを表示
+  "Display notes for novice user."
+  
+  (with-current-buffer (get-buffer "*scratch*")
+    (when (not (one-window-p))
+      (delete-windows-on (get-buffer "*Compile-Log*")))
+    
+  ;; 先頭行をヘッダーラインに
+  ;; (dolist (color-name (defined-colors))
+  ;;   (message color-name))
+  ;;(y-or-n-p "Continue?")
+    (setq header-line-format
+          (concat " 注意: ここにC言語のプログラムを書かないでください。"))
+
+    ;; 注意書きを挿入
+    (goto-char (point-max))
+    (insert "\nC言語のソースファイル(拡張子.c)を作成/開いて、そこにプログラムを書いてください。\n\n"
+            "ファイルを作成/開くには、キー操作(C-x C-f)を使います。\n"
+            "(「C-x」はCtrlキーを押したままXキーを押す操作。その後の「C-f」も同様)\n"
+            "一番下に「Find File:」と出たら、ファイル名を入力しEnterキーを押してください。\n\n"
+            
+            "ヒント: 演習用のファイル(progNN.c)であれば、もっと簡単な方法があります。\n"
+            "「<f7>」(F7キー)を押し、一番下に「Program Number:」と出たら、\n"
+            "プログラム番号(1桁か2桁の整数)を入力し、Enterキーを押してください。\n\n"
+            "起動時の処理が完了しました。\n")
+    
+    (set-buffer-modified-p nil)
+    (face-remap-add-relative 'header-line
+                             :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
+                             :background (if (available-truecolor-p) "#ffaf00" "color-214"))
+
+    (advice-remove 'package-install #'print-package-name-in-scrach-buffer)
+))
+
+
+
+
 
 ;; leafの読み込み
 (eval-and-compile
@@ -21,14 +95,21 @@
                        ("org"   . "https://orgmode.org/elpa/")))
   (package-initialize)
   (unless (package-installed-p 'leaf)
+    
     (with-current-buffer (get-buffer "*scratch*")
-      (setq initial-major-mode 'lightweight-buffer-mode)
+      (lightweight-buffer-mode)
       (setq header-line-format
             (concat " 起動時の処理を実行中です。"))
-      (insert "\nパッケージの導入作業を行います。しばらくお待ちください。\n")
+
+      (insert "\n"
+              "パッケージの自動導入作業を行ないます。\n"
+              "導入作業が終わるまでしばらく時間がかかります。\n"
+              "最上行がオレンジ色になるまでお待ちください。\n\n")
       (redisplay))
+    
     (package-refresh-contents)
     (package-install 'leaf))
+
 
   (leaf leaf-keywords
     :ensure t
@@ -40,21 +121,57 @@
 
     :config
     ;; initialize leaf-keywords.el
-    (leaf-keywords-init))
+    (leaf-keywords-init)
+    )
 
+  ;; leaf-tree関連 開発時のみ
   (leaf leaf-tree
     :ensure t imenu-list
+    :disabled (not in-development)
     :custom
-    ((imenu-list-size . 30)
-     (imenu-list-position . 'left))
+    (
+     (imenu-list-size . 30)
+     (imenu-list-position . 'left)
+     (leaf-tree-flat . nil)
+     )
+    :bind
+    (("M-t" . leaf-tree-mode))
+    )
+
+
+  ;; leaf-convert関連 開発時のみ
+  (leaf leaf-convert
+    :ensure t
+    :disabled (not in-development)
     )
 
   )
 
+;; GUI用の設定。一部はearly-init.elに移動(起動時のちらつきを抑えるため)
+(leaf *window-system-settings
+  :doc "settings for window-system"
+  :when (window-system)
+  :config
+  (modify-frame-parameters nil '((sticky . t) (width . 100) (height . 40)))
+
+  (set-face-attribute 'default nil
+                      :family "UDEV Gothic NF"
+                      :height 136)
+  (set-fontset-font (frame-parameter nil 'font)
+                    'japanese-jisx0208
+                    (cons "UDEV Gothic NF" "iso10646-1"))
+  (set-fontset-font (frame-parameter nil 'font)
+                    'japanese-jisx0212
+                    (cons "UDEV Gothic NF" "iso10646-1"))
+  (set-fontset-font (frame-parameter nil 'font)
+                    'katakana-jisx0201
+                    (cons "UDEV Gothic NF" "iso10646-1"))
+
+  )
 
 
 (provide 'init)
-(defvar my-development t)
+
 
 
 ;; カスタムファイルの指定。カスタム設定が custom.el に分離されるようになる
@@ -86,17 +203,22 @@
   )
 
 
-;; EmacsのC言語部分で定義されている変数群など
+;; EmacsのC言語部分で定義されている変数など
 (leaf cus-start
   :doc "define customization properties of builtins"
   :tag "builtin" "internal"
+  :custom-face
+  ;; 選択部分の色
+  ((region . '((((background dark)) (:background "#0078d7" :foreground "#101010"))
+               (t                   (:background "#0078d7" :foreground "#101010"))))
+   )
   :custom
   (
    ;; (user-full-name . "YOUR NAME")
    ;; (user-mail-address . "hogehoge@example.com")
    ;; (user-login-name . "hogehoge")
    (create-lockfiles . nil)
-   (debug-on-error . t)
+   ;; (debug-on-error . t)
    (init-file-debug . t)
    (frame-resize-pixelwise . t)
    (enable-recursive-minibuffers . t)
@@ -110,9 +232,9 @@
    (truncate-lines . t)
    ;; (use-dialog-box . nil)
    ;; (use-file-dialog . nil)
-   (menu-bar-mode . nil)
-   (tool-bar-mode . nil)
-   (scroll-bar-mode . nil)
+   ;; (menu-bar-mode . nil)
+   ;; (tool-bar-mode . nil)
+   ;; (scroll-bar-mode . nil)
    ;; 字下げにタブ文字を使わない
    (indent-tabs-mode . nil)
    )
@@ -152,6 +274,7 @@
   :doc "highlight matching paren"
   :tag "builtin"
   :defvar (show-paren-when-point-inside-paren show-paren-when-point-in-periphery show-paren-style)
+
   :mode-hook
   (c-mode-common-hook . ((setq-local show-paren-style 'expression)
                          (setq-local show-paren-when-point-inside-paren nil)
@@ -166,6 +289,7 @@
                            (setq-local show-paren-mode t)
                            ))
   (lightweight-buffer-mode-hook . ((setq-local show-paren-mode nil)))
+  
   :preface
   ;; TrueColor環境かどうかのチェック
   (defun available-truecolor-p ()
@@ -182,7 +306,9 @@
    (show-paren-delay . 0.1)
    (show-paren-style . 'parenthesis)
    (show-paren-mode . nil)
+   (show-paren-priority . -1)
    )
+  
   :config
   (defface my-paren-match-remap-style
     `((((background dark)) (:background ,(if (available-truecolor-p) "#4e4e4e" "color-239")))
@@ -429,193 +555,19 @@
 
 
 ;;
-;; package.el関連(標準パッケージ)
-;;
-(when (require 'package nil t) 
-
-  ;; 必須パッケージ
-  (defvar my-favorite-packages
-    '(
-      ;; restart-emacs
-      powerline
-      real-auto-save
-      smartparens
-      flycheck
-      ))
-
-  ;; 開発用パッケージ
-  (defvar my-development-packages
-    '(
-      counsel
-      highlight-defined
-      bm
-      package-utils
-      ))
-
-  ;; 指定されたリストに含まれるパッケージが、すでにインストール済みか調べる
-  (defun all-packages-installed-p (package-list)
-    "Check if all favorite packages are installed.
-
-PACKAGE-LIST: list of packages."
-    (interactive)
-    (catch 'early-return-in-all-packages-installed-p
-      (dolist (package package-list)
-        (unless (package-installed-p package)
-          (throw 'early-return-in-all-packages-installed-p nil)))
-      t))
-
-  ;;
-  ;; 指定したリスト内のパッケージがインストールされていなければ自動的にインストール
-  ;;
-  (defun install-listed-packages-automatically (package-list &optional verbose)
-    "Install listed packages automatically.
-
-PACKAGE-LIST: list of packages.
-VERBOSE: insert messages to *scratch* if non-nil.
-"
-    (with-current-buffer (get-buffer "*scratch*")
-      (goto-char (point-max))
-      (when verbose
-        (insert "\n"
-                "パッケージの自動導入作業を行ないます。\n"
-                "導入作業が終わるまでしばらく時間がかかります。\n"
-                "最上行がオレンジ色になるまでお待ちください。\n\n"))
-      (unless package-archive-contents
-        (when verbose 
-          (insert "パッケージの一覧を取得中。\n")
-          (redisplay))
-        (package-refresh-contents))
-      (dolist (package package-list)
-        (unless (package-installed-p package)
-          (when verbose 
-            (insert (symbol-name package) " パッケージ導入中。\n")
-            (redisplay))
-          (package-install package)))
-
-      (when verbose 
-        (insert "\nパッケージ自動導入処理が完了しました。\n\n")
-        (redisplay))
-
-      )
-    )
-
-    ;; 開発用パッケージを自動インストールする関数
-  (defun install-development-packages-automatically ()
-    "Install development packages."
-    (interactive)
-    (unless (all-packages-installed-p my-development-packages)
-      (install-listed-packages-automatically my-development-packages t)
-      )
-    )
-
-  ;; 必須パッケージを自動インストール
-  (unless (all-packages-installed-p my-favorite-packages)
-    (install-listed-packages-automatically my-favorite-packages t)
-    )
-  )
-
-
-;;
-;; 軽量バッファーモード
-;;
-(defun lightweight-buffer-mode ()
-  "Lightweight Buffer Mode for novice."
-  (interactive)
-  (setq mode-name "Lightweight Buffer")
-  (setq major-mode 'lightweight-buffer-mode)
-  (run-hooks 'lightweight-buffer-mode-hook))
-
-;;
 ;; 指定したリスト中のインデックスのカラーネームがすべて存在するか調べる
 ;;
-(defun available-indexed-colors-p (target)
-  (let ((color_name))
-    (catch 'early-return-in-available-indexed-color-p
-      (dolist (index target)
-        (setq color_name (concat "color-" (number-to-string index)))
-        (when (not (and (color-defined-p color_name)
-                        (color-supported-p color_name)))
-          (throw 'early-return-in-available-indexed-color-p nil))
-        )
-      t)
-    ))
-
-(defun init-scratch-buffer (&rest _ignored)
-  (with-current-buffer (get-buffer "*scratch*")
-    ;; 起動時のscratchバッファーをlightweight-buffer-modeに
-    (setq initial-major-mode 'lightweight-buffer-mode)
-    (setq header-line-format
-          (concat " 起動時の処理を実行中です。"))
-    (if (available-truecolor-p)
-        (face-remap-add-relative 'header-line
-                                 :foreground "#1c1c1c"
-                                 :background "#a8a8a8")
-      (when (available-indexed-colors-p '(234 248))
-        (face-remap-add-relative 'header-line
-                                 :foreground "color-234"
-                                 :background "color-248")
-        )
-      )
-
-  
-    ))
-
-(add-hook 'after-init-hook #'init-scratch-buffer)
-
-;; ヘッダーラインの基本の外見
-(set-face-attribute 'header-line nil
-                    :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
-                    :background (if (available-truecolor-p) "#a8a8a8" "color-248")
-                    :inherit nil
-                    :overline nil
-                    :underline t)
-
-;;
-;; 起動処理後の表示
-;;
-(if (version< emacs-version "27.0")
-  (with-current-buffer (get-buffer "*scratch*")
-    (insert "Emacsのバージョンが古くて動きません。\n"
-            "新しいEmacsを優先起動する設定の.bash_profileを作っていないのでは。\n\n")
-    )
-  ;;(advice-add 'command-line-1 :after #'display-notes)
-  (add-hook 'emacs-startup-hook #'display-notes)
-  )
-
-(defun display-notes (&rest _ignored)
-  ;; *scratch*に起動後の注意書きを表示
-  "Display notes for novice user."
-  
-  (with-current-buffer (get-buffer "*scratch*")
-    (when (not (one-window-p))
-      (delete-windows-on (get-buffer "*Compile-Log*")))
-    
-  ;; 先頭行をヘッダーラインに
-  ;; (dolist (color-name (defined-colors))
-  ;;   (message color-name))
-  ;;(y-or-n-p "Continue?")
-    (setq header-line-format
-          (concat " 注意: ここにC言語のプログラムを書かないでください。"))
-
-    ;; 注意書きを挿入
-    (goto-char (point-max))
-    (insert "\nC言語のソースファイル(拡張子.c)を作成/開いて、そこにプログラムを書いてください。\n\n"
-            "ファイルを作成/開くには、キー操作(C-x C-f)を使います。\n"
-            "(「C-x」はCtrlキーを押したままXキーを押す操作。その後の「C-f」も同様)\n"
-            "一番下に「Find File:」と出たら、ファイル名を入力しEnterキーを押してください。\n\n"
-            
-            "ヒント: 演習用のファイル(progNN.c)であれば、もっと簡単な方法があります。\n"
-            "「<f7>」(F7キー)を押し、一番下に「Program Number:」と出たら、\n"
-            "プログラム番号(1桁か2桁の整数)を入力し、Enterキーを押してください。\n\n"
-            "起動時の処理が完了しました。\n")
-    
-    (set-buffer-modified-p nil)
-    (face-remap-add-relative 'header-line
-                             :foreground (if (available-truecolor-p) "#1c1c1c" "color-234")
-                             :background (if (available-truecolor-p) "#ffaf00" "color-214"))
-
-))
-
+;; (defun available-indexed-colors-p (target)
+;;   (let ((color_name))
+;;     (catch 'early-return-in-available-indexed-color-p
+;;       (dolist (index target)
+;;         (setq color_name (concat "color-" (number-to-string index)))
+;;         (when (not (and (color-defined-p color_name)
+;;                         (color-supported-p color_name)))
+;;           (throw 'early-return-in-available-indexed-color-p nil))
+;;         )
+;;       t)
+;;     ))
 
 ;; shell関連
 (leaf shell
@@ -902,6 +854,28 @@ VERBOSE: insert messages to *scratch* if non-nil.
 
   (set-face-foreground 'flycheck-info "lightblue")
 
+
+  ;; 指定したバッファのあるウィンドウの表示をflycheck-errorsに切り替える
+  (defun switch-window-buffer-to-flycheck-errors-from (buf)
+    (cond ((get-buffer "*Flycheck errors*")
+           (set-window-buffer
+            (get-buffer-window buf)
+            (get-buffer "*Flycheck errors*"))
+           )
+          (t
+           (delete-windows-on buf)))
+    t)
+
+  ;; flycheck-errorバッファにリストが含まれているか調べる
+  (defun flycheck-errors-has-list-p ()
+    (cond ((get-buffer "*Flycheck errors*")
+           (save-current-buffer
+             (set-buffer (get-buffer "*Flycheck errors*"))
+             (save-excursion
+               (if (eq (point-min) (point-max))
+                   nil t))))
+          (t
+           nil)))
   
   )
 
@@ -999,7 +973,8 @@ VERBOSE: insert messages to *scratch* if non-nil.
                          (setq-local my-header-line-format
                                      (concat "       "
                                              "F5:変換実行 F6:上下移動 F7:開く F8:表示切替 F9:再起動"
-                                             (when (string= (getenv "TERM_PROGRAM") "WezTerm")
+                                             (when (and (string= (getenv "TERM_PROGRAM") "WezTerm")
+                                                        (not (window-system)))
                                                " (C|S|A-F10〜12:外見変更)")))
                          (setq header-line-format my-header-line-format)
 
@@ -1012,11 +987,11 @@ VERBOSE: insert messages to *scratch* if non-nil.
   :doc "Automatic insertion, wrapping and paredit-like navigation with user defined pairs"
   :ensure t dash
   :mode-hook
-  (c-mode-common-hook . (
-                         ;; smartparensによるカッコ組入力を行なう
-                         (smartparens-mode t)
-                         ;; smartparensによる色付けを行わない
+  (c-mode-common-hook . ((smartparens-mode t)
                          (turn-off-show-smartparens-mode)))
+  (emacs-lisp-mode-hook . ((smartparens-mode t)
+                           (smartparens-strict-mode t)
+                           (turn-off-show-smartparens-mode)))
 
   :setq-default
   (
@@ -1086,6 +1061,60 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (my-compiled-source-buffer . nil)
 
   :config
+  ;; compile終了時に実行する関数リストに追加
+  (add-to-list 'compilation-finish-functions
+               'switch-compilation-buffer)
+
+  ;; 指定したバッファに警告があるか調べる
+  (defun compilation-buffer-has-warning-p (buf)
+    (save-current-buffer
+      (set-buffer buf)
+      (save-excursion
+        (goto-char (point-min))
+        (if (or (search-forward "warning:" nil t)
+                (search-forward "警告:" nil t)) t nil))))
+
+  ;; compilationバッファにエラー・警告があればflycheck-errors、なければshellに切り替え
+  (defun switch-compilation-buffer (buf str)
+    (cond ((or (string-match "abnormally" str)
+             (compilation-buffer-has-warning-p buf))
+         (setq has-error-or-warnings t)
+         (message "エラー・警告を修正してください")
+         ;; flycheck-errorsにリストがあればflycheck-errorsに切り換える
+         (if (flycheck-errors-has-list-p)
+             (switch-window-buffer-to-flycheck-errors-from "*compilation*")
+           ;; flycheck-errorにリストがないなら、checkerをld付きのものに変更
+           (add-to-list 'flycheck-checkers 'c-gcc-ja-with-ld)
+           (delete 'c-gcc-ja flycheck-checkers)
+             
+           (switch-window-buffer-to-flycheck-errors-from "*compilation*")
+           (with-current-buffer my-compiled-source-buffer
+               (flycheck-buffer))
+             )
+         )
+        (t
+         (setq has-error-or-warnings nil)
+         ;; flycheck-errorのcheckerをldなしのものに戻す
+         (add-to-list 'flycheck-checkers 'c-gcc-ja)
+         (delete 'c-gcc-ja-with-ld flycheck-checkers)
+         
+         (message "変換成功。実行できます")
+         (shell-and-insert)
+         )))
+
+  ;; 現在のファイル全体をインデントする
+  (defun indent-whole-file ()
+    (interactive)
+    (when (not (eq buffer-file-name nil))
+      ;; ファイルバッファーにいる
+      (let ((file-ext (file-name-extension buffer-file-name t))
+            )
+        (when (string= file-ext ".c")
+          ;; Cのソースファイルのバッファーにいる
+          (indent-region (point-min) (point-max))
+          )))
+    )
+  
   ;; 編集中のC言語のソースファイルを実行形式に変換する
   (defun save-and-compile ()
     (interactive)
@@ -1191,6 +1220,7 @@ VERBOSE: insert messages to *scratch* if non-nil.
      )
     )
 
+
   
   )
 
@@ -1235,158 +1265,76 @@ VERBOSE: insert messages to *scratch* if non-nil.
     '("/\\.bash_profile$" . "Bash profile template")
     [("Bash profile template: "
       "export LANG=ja_JP.UTF-8\n"
-      "export PATH=/snap/emacs/current/usr/bin:$PATH\n"
+      "if [[ ! $PATH = */snap/emacs/current/usr/bin* ]] ; then\n"
+      "\texport PATH=/snap/emacs/current/usr/bin:$PATH\n"
+      "fi\n"
       "export HISTCONTROL=ignoreboth\n"
       "source ~/.bashrc\n"
-      "if [[ \"$TERM\" = 'xterm-256color--wezterm' ]]; then\n" 
-      "\texport TERM=xterm-256color\n"
-      "\texport TERM_PROGRAM=WezTerm\n"
-      "fi\n"
       "printf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_NAME\" $(hostname | base64)\n"
       "printf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PRETTY_NAME\" $(sed -nre 's/^PRETTY_NAME=\"([^\(]+) .*\"/\\1/p' /etc/os-release | base64)\n"
-      "if [ -n \"$SSH_CONNECTION\" ]; then\n"
+      "if [[ -n \"$SSH_CONNECTION\" ]]; then\n"
       "\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PORT\" $(echo -n $SSH_CONNECTION | cut -d' ' -f 4 | base64)\n"
       "fi\n"
       )])
   )
 
 
-;; 
-;; 自作コマンドと関数
-;; 
+;; highlight-defined関連 開発時のみ
+(leaf highlight-defined
+  :doc "Syntax highlighting of known Elisp symbols"
+  :emacs>= 24
+  :ensure t
+  :disabled (not in-development)
+  :hook
+  ((emacs-lisp-mode-hook . highlight-defined-mode))
+  )
 
-
-
-
-
-
-;;
-;; 指定したバッファに警告があるか調べる
-;;
-(defun compilation-buffer-has-warning-p (buf)
-  (save-current-buffer
-    (set-buffer buf)
-    (save-excursion
-      (goto-char (point-min))
-      (if (or (search-forward "warning:" nil t)
-              (search-forward "警告:" nil t)) t nil))))
-
-;;
-;; 指定したバッファのあるウィンドウの表示をflycheck-errorsに切り替える
-;;
-(defun switch-window-buffer-to-flycheck-errors-from (buf)
-  (cond ((get-buffer "*Flycheck errors*")
-         (set-window-buffer
-          (get-buffer-window buf)
-          (get-buffer "*Flycheck errors*"))
-         )
-        (t
-         (delete-windows-on buf)))
-  t)
-
-;;
-(defun flycheck-errors-has-list-p ()
-  (cond ((get-buffer "*Flycheck errors*")
-         (save-current-buffer
-           (set-buffer (get-buffer "*Flycheck errors*"))
-           (save-excursion
-             (if (eq (point-min) (point-max))
-                 nil t))))
-        (t
-         nil)))
-
-
-;; compilationバッファに
-;; エラー・警告があればflycheck-errorsに切り替え
-;; エラー・警告がなければshellに切り替える
-(defun switch-compilation-buffer (buf str)
-  (cond ((or (string-match "abnormally" str)
-             (compilation-buffer-has-warning-p buf))
-         (setq has-error-or-warnings t)
-         (message "エラー・警告を修正してください")
-         ;; flycheck-errorsにリストがあればflycheck-errorsに切り換える
-         (if (flycheck-errors-has-list-p)
-             (switch-window-buffer-to-flycheck-errors-from "*compilation*")
-           ;; flycheck-errorにリストがないなら、checkerをld付きのものに変更
-           (add-to-list 'flycheck-checkers 'c-gcc-ja-with-ld)
-           (delete 'c-gcc-ja flycheck-checkers)
-             
-           (switch-window-buffer-to-flycheck-errors-from "*compilation*")
-           (with-current-buffer my-compiled-source-buffer
-               (flycheck-buffer))
-             )
-         )
-        (t
-         (setq has-error-or-warnings nil)
-         ;; flycheck-errorのcheckerをldなしのものに戻す
-         (add-to-list 'flycheck-checkers 'c-gcc-ja)
-         (delete 'c-gcc-ja-with-ld flycheck-checkers)
-         
-         (message "変換成功。実行できます")
-         (shell-and-insert)
-         )))
-
-
-;; compile終了時に実行する関数リストに追加
-(unless compilation-finish-functions
-  (setq compilation-finish-functions nil))
-(add-to-list 'compilation-finish-functions
-             'switch-compilation-buffer)
-
-
-;;
-;; 現在のファイル全体をインデントする
-;;
-(defun indent-whole-file ()
-  (interactive)
-  (when (not (eq buffer-file-name nil))
-    ;; ファイルバッファーにいる
-    (let ((file-ext (file-name-extension buffer-file-name t))
-          )
-      (when (string= file-ext ".c")
-        ;; Cのソースファイルのバッファーにいる
-        (indent-region (point-min) (point-max))
-        ))))
-
-;; emacs-lisp-mode用の設定
-(add-hook 'emacs-lisp-mode-hook 'setup-development-packages)
-
-(defun setup-development-packages ()
-  "Set up development packages"
-  (interactive)
-
-  (when (require 'leaf-tree nil t)
-    (global-set-key (kbd "M-t") 'leaf-tree-mode))
+;; ivy/swiper/counsel関連 開発時のみ
+(leaf ivy
+  :doc "Incremental Vertical completYon"
+  :tag "matching"
+  :emacs>= 24.5
+  :ensure t
+  :disabled (not in-development)
   
-  (when (require 'smartparens nil t)
-    (smartparens-strict-mode t)
-    (turn-off-show-smartparens-mode))
-
-  (when (require 'swiper nil t)
-    (global-set-key (kbd "C-s") 'swiper))
-
-  (when (require 'counsel nil t)
-    (global-set-key (kbd "M-x") 'counsel-M-x)
-    (global-set-key (kbd "M-i") 'counsel-imenu)
-    (global-set-key (kbd "C-x C-b") 'counsel-ibuffer)
+  :config
+  (leaf swiper
+    :doc "Isearch with an overview.  Oh, man!"
+    :ensure t
+    :require ivy
+    :emacs>= 24.5
+    :bind
+    (("C-s" . swiper))
     )
 
-  (when (require 'highlight-defined nil t)
-    (highlight-defined-mode t))
+  (leaf counsel
+    :doc "Various completion functions using Ivy"
+    :require ivy swiper
+    :emacs>= 24.5
+    :ensure t
+    :bind
+    (
+     ("M-x" . counsel-M-x)
+     ("M-i" . counsel-imenu)
+     ("C-x C-b" . counsel-ibuffer)
+     )
 
-  (when (require 'bm nil t)
-    (global-set-key (kbd "<f2>") 'bm-next)
-    (global-set-key (kbd "S-<f2>") 'bm-toggle)
-    (set-face-attribute 'bm-face nil
-                        :foreground "black"
-                        :background "#c0dcc0")
     )
+  
+  )
 
-  ;; 全角スペース"　"などの外見を変更
-  ;; (when (fboundp 'whitespace-mode)
-  ;;   (whitespace-mode t))
+(leaf bm
+  :doc "Visible bookmarks in buffer."
+  :ensure t
+  :config
+  (global-set-key (kbd "<f2>") 'bm-next)
+  (global-set-key (kbd "S-<f2>") 'bm-toggle)
+  :defer-config
+  (set-face-attribute 'bm-face nil
+                      :foreground "#101010"
+                      :background "#608060"
+                      )
 
-  (setq indent-tabs-mode nil)
   )
 
 
@@ -1402,6 +1350,8 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (:override restart-emacs--start-emacs-in-terminal my-restart-emacs)
 
   :preface
+  ;; 先頭に空白を入れることでコマンド履歴に残さない
+  ;; 環境変数 HISTCONTROL に「ignoreboth」または「ignorespace」を設定する必要がある
   (defun my-restart-emacs (&optional args)
     "Start Emacs in current terminal (modified)."
     (suspend-emacs (format " fg ; clear ; %s %s -nw"
@@ -1414,34 +1364,15 @@ VERBOSE: insert messages to *scratch* if non-nil.
   (defun desktop-save-and-restart-emacs ()
     "Run desktop-save and restart-emacs."
     (interactive)
-    (desktop-save "~")
+    (desktop-save user-emacs-directory) ; "~"
     (restart-emacs)
     )
   
   :config
   ;; emacs-restartによる再起動後なら、開いていたバッファを再現
-  (when (file-exists-p "~/.emacs.desktop")
-    (desktop-read "~")
-    (delete-file "~/.emacs.desktop")
+  (when (file-exists-p (locate-user-emacs-file ".emacs.desktop")) ; "~/.emacs.desktop"
+    (desktop-read user-emacs-directory)                                               ; "~"
+    (delete-file (locate-user-emacs-file ".emacs.desktop")) ; "~/.emacs.desktop"
     (message "Emacsを再起動してバッファを復元しました"))
 
-  )
-
-(leaf *window-system-settings
-  :doc "settings for window-system"
-  :when (window-system)
-  :config
-  (set-face-attribute 'default nil
-                      :family "UDEV Gothic NF"
-                      :height 136)
-  (set-fontset-font (frame-parameter nil 'font)
-                    'japanese-jisx0208
-                    (cons "UDEV Gothic NF" "iso10646-1"))
-  (set-fontset-font (frame-parameter nil 'font)
-                    'japanese-jisx0212
-                    (cons "UDEV Gothic NF" "iso10646-1"))
-  (set-fontset-font (frame-parameter nil 'font)
-                    'katakana-jisx0201
-                    (cons "UDEV Gothic NF" "iso10646-1"))
-  
   )
