@@ -555,21 +555,6 @@
   )
 
 
-;;
-;; 指定したリスト中のインデックスのカラーネームがすべて存在するか調べる
-;;
-;; (defun available-indexed-colors-p (target)
-;;   (let ((color_name))
-;;     (catch 'early-return-in-available-indexed-color-p
-;;       (dolist (index target)
-;;         (setq color_name (concat "color-" (number-to-string index)))
-;;         (when (not (and (color-defined-p color_name)
-;;                         (color-supported-p color_name)))
-;;           (throw 'early-return-in-available-indexed-color-p nil))
-;;         )
-;;       t)
-;;     ))
-
 ;; shell関連
 (leaf shell
   :doc "specialized comint.el for running the shell"
