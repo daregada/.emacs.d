@@ -388,7 +388,7 @@
   ;; 端末で以下の設定を有効にするには、xterm-mouse-modeにしておく必要がある
   :after xt-mouse
   :defvar (my-prev-buffer-name)
-  :commands switch-window-buffer-to-flycheck-errors-from
+  :defun (switch-window-buffer-to-flycheck-errors-from . init)
   ;; マウス操作で*shell*や*compilation*バッファからソースコードに切り替えた時に*Flycheck errors*を表示
   :advice
   ;; (advice-add 'mouse-set-point :before #'mouse-set-point-before)
@@ -595,7 +595,7 @@
   :doc "Rewrite of Powerline"
   :ensure t
   :require cl-lib
-  :commands powerline-my-theme
+  :defun (powerline-my-theme . init)
   :custom
   (
    (powerline-display-buffer-size . nil)
@@ -689,8 +689,7 @@
   (set-face-attribute 'powerline-inactive1 nil
                       :foreground "#444" :background "#ccc"    :inherit 'mode-line)
   (set-face-attribute 'powerline-inactive2 nil
-                      :foreground "#444" :background "#bbb"    :inherit 'mode-line)
-  )
+                      :foreground "#444" :background "#bbb"    :inherit 'mode-line))
 
 
 ;; flycheck関連
@@ -922,8 +921,8 @@
   :doc "major mode for editing C and similar languages"
   :tag "builtin"
   :defvar (c-basic-offset c-cleanup-list)
-  :commands (c-toggle-comment-style available-truecolor-p)
-  :preface
+  :defun (c-toggle-comment-style . cc-cmds)
+  :defun (available-truecolor-p . init)
   :defvar (my-header-line-format) 
   :custom-face
   :bind
@@ -989,7 +988,7 @@
   ;; (advice-remove 'delete-backward-char #'sp-delete-pair-advice)
   (delete-backward-char sp-delete-pair-advice)
 
-  :commands (sp-forward-slurp-sexp sp-forward-barf-sexp sp-raise-sexp sp-splice-sexp sp-local-pair)
+  :defun ((sp-forward-slurp-sexp sp-forward-barf-sexp sp-raise-sexp sp-splice-sexp sp-local-pair) . smartparens)
   :bind
   (smartparens-mode-map
    ;; smartparensのparedit風操作のキー割り当て(c-modeでは無効)
@@ -1034,7 +1033,7 @@
   :doc "run compiler as inferior of Emacs, parse error messages"
   :tag "builtin"
   :defvar (my-command my-compiled-source-buffer)
-  :commands (compilation-buffer-has-warning-p flycheck-errors-has-list-p shell-and-insert indent-whole-file insert-my-command-at-end)
+  :defun ((compilation-buffer-has-warning-p flycheck-errors-has-list-p shell-and-insert indent-whole-file insert-my-command-at-end) . init)
   
   :custom
   ;; 実行形式への変換に使うコマンドの確認(最下行に表示してEnterキー)をしない
@@ -1335,7 +1334,7 @@
   :doc "restart emacs from within emacs"
   :ensure t
   :require desktop
-  :defun (restart-emacs--get-emacs-binary restart-emacs--string-join)
+  :defun ((restart-emacs--get-emacs-binary restart-emacs--string-join) . restart-emacs)
   :advice
   ;; (advice-add 'restart-emacs--start-emacs-in-terminal :override #'my-restart-emacs)
   (:override restart-emacs--start-emacs-in-terminal my-restart-emacs)
