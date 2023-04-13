@@ -1258,10 +1258,12 @@
       "fi\n"
       "export HISTCONTROL=ignoreboth\n"
       "source ~/.bashrc\n"
-      "printf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_NAME\" $(hostname | base64)\n"
-      "printf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PRETTY_NAME\" $(sed -nre 's/^PRETTY_NAME=\"([^\(]+) .*\"/\\1/p' /etc/os-release | base64)\n"
-      "if [[ -n \"$SSH_CONNECTION\" ]]; then\n"
-      "\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PORT\" $(echo -n $SSH_CONNECTION | cut -d' ' -f 4 | base64)\n"
+      "if [[ \"$TERM_PROGRAM\" = \"WezTerm\" ]]; then\n"
+      "\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_NAME\" $(hostname | base64)\n"
+      "\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PRETTY_NAME\" $(sed -nre 's/^PRETTY_NAME=\"([^\(]+) .*\"/\\1/p' /etc/os-release | base64)\n"
+      "\tif [[ -n \"$SSH_CONNECTION\" ]]; then\n"
+      "\t\tprintf \"\\033]1337;SetUserVar=%s=%s\\007\" \"REMOTE_HOST_PORT\" $(echo -n $SSH_CONNECTION | cut -d' ' -f 4 | base64)\n"
+      "\tfi\n"
       "fi\n"
       )])
   )
