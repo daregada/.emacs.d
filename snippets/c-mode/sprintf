@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: sprintf
+# key: sprintf
+# --
+sprintf(${1:配列名}, "${2:文字列}", ${3:式});

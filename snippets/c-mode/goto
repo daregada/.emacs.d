@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: goto ...;
+# key: goto
+# --
+goto ${1:ラベル};

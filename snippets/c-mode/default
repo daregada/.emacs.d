@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: default: ...
+# key: default
+# expand-env: ((yas-also-auto-indent-first-line t))
+# --
+default:
+    $0
+    break;

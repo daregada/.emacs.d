@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: switch (...) { case : ... default: ...}
+# key: switch
+# --
+switch (${1:式}) {
+case ${2:値}:
+    $0
+    break;
+default:
+    break;
+}

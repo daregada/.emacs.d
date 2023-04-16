@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: strtol
+# key: strtol
+# --
+strtol(${1:配列名}, NULL, 10);

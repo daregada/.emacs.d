@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# contributor: York Zhao
+# name: for
+# key: for
+# --
+for (int ${1:i} = ${2:0}; $1 ${2:$(if (string= yas-text "0") "<" "<=")} ${3:最大値}; $1++) {
+    $0
+}

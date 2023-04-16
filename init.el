@@ -724,7 +724,9 @@
    ;; 前回のコンパイルの結果を保存する
    (has-error-or-warnings . nil)
    ;; 自動チェックするトリガーを指定(モード切り替え、保存、改行入力)
-   (flycheck-check-syntax-automatically . '(mode-enabled save new-line)) ; 自動保存により idle-change は不要に
+   (flycheck-check-syntax-automatically . '(mode-enabled save
+                                                         ;;new-line
+                                                         )) ; 自動保存により idle-change は不要に
    ;; エラーを表示する関数をエコー領域を使わないものに変更
    (flycheck-display-errors-function . #'flycheck-display-error-messages-unless-error-list)
 
@@ -1216,7 +1218,6 @@
 (leaf autoinsert
   :doc "automatic mode-dependent insertion of text into new files"
   :tag "builtin"
-  :pre-setq
   :custom
   (
    ;; テンプレートを使うかどうかの質問をしない(常に使う)
@@ -1324,6 +1325,80 @@
                       :background "#608060"
                       )
 
+  )
+
+
+;;
+;; yasnippet関連
+;;
+(leaf yasnippet
+  :ensure t
+  :custom (
+           ;; 言語モードに応じたインデントを行なう
+           (yas-indent-line . 'auto)
+           ;; (yas-global-mode . t)
+           ;; 自前のスニペットのみを扱う
+           ;; (yas-snippet-dirs . '("~/.emacs.d/snippets"))
+           (yas-snippet-dirs . `(,(locate-user-emacs-file "snippets")))
+           )
+  :bind (yas-keymap
+         ("<tab>" . nil))
+  :mode-hook
+  (c-mode-hook . (
+                  (yas-minor-mode)
+                  (yas-reload-all)
+                  ))
+  :config
+  ;; yasnippet-snippets と yatemplate は使わない
+  ;; (leaf yasnippet-snippets :ensure t)
+  ;; (leaf yatemplate
+  ;;   :ensure t
+  ;;   :config
+  ;;   (yatemplate-fill-alist))
+  )
+
+;;
+;; auto-complete関連
+;;
+(leaf auto-complete
+  :doc "Auto Completion for GNU Emacs"
+  :ensure t popup
+  :require cl-lib popup auto-complete-config
+  :leaf-defer nil
+  :defvar (ac-completing-map ac-sources)
+  :defun ((ac-set-trigger-key) . auto-complete)
+  
+  :custom
+  (
+   ;; 自動的に開始しない
+   (ac-auto-start . nil)
+   )
+  :config
+  :mode-hook
+  (c-mode-common-hook . (
+                         (auto-complete-mode t)
+                         (ac-set-trigger-key "TAB")
+                         (define-key ac-completing-map (kbd "TAB") 'ac-complete)
+                         (add-to-list 'ac-sources 'ac-source-yasnippet)
+                         ))
+ 
+  )
+
+
+(leaf ac-c-headers
+  :doc "auto-complete source for C headers"
+  :ensure t
+  :leaf-defer nil
+  :after auto-complete
+  :defvar (ac-sources)
+  :mode-hook
+  (c-mode-hook . (
+                  (when (and (require 'auto-complete nil t)
+                             (require 'ac-c-headers nil t))
+                    (add-to-list 'ac-sources 'ac-source-c-headers)
+                    (add-to-list 'ac-sources 'ac-source-c-header-symbols t)
+                    )
+                  ))
   )
 
 
