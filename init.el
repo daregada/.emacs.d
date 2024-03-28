@@ -795,16 +795,16 @@
   (flycheck-define-clike-checker
    c-gcc-ja
    ;; 旧EDUのgcc 4では、色付けしない -fdiagnostics-plain-output オプションが使えない
-   ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
-   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
+   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
+   ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
    c-mode)
 
   ;; リンカまで実行するエラーチェッカー。倍時間がかかるため、コンパイル時に c-gcc-ja で検出できなかったときに切り替える
   (flycheck-define-clike-checker
    c-gcc-ja-with-ld
    ;; 旧EDUのgcc 4では、色付けしない -fdiagnostics-plain-output オプションが使えない
-   ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
-   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
+   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
+   ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
    c-mode)
 
   ;; c-gcc-jaのみチェッカーとして登録
@@ -1140,7 +1140,7 @@
              (setq my-command (format "./%s" file-base))
              ;; コンパイルコマンドにファイル名などを埋め込む
              (set (make-local-variable 'compile-command)
-                  (format "gcc -Wall -Wextra -std=gnu11 -lm -g -O -o%s %s" file-base file-name))
+                  (format "gcc -Wall -Wextra -fdiagnostics-plain-output -std=gnu11 -lm -g -O -o%s %s" file-base file-name))
              ;; コンパイルを実行。画面が自動分割されて変換結果が表示される
              ;; コンパイル完了後はswitch-compilation-bufferが呼び出されてflycheck-errors-listに切り替わる
              (compile (eval compile-command))
