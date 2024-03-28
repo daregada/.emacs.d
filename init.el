@@ -1253,9 +1253,9 @@
     '("/\\.bash_profile$" . "Bash profile template")
     [("Bash profile template: "
       "export LANG=ja_JP.UTF-8\n"
-      "if [[ ! $PATH = */snap/emacs/current/usr/bin* ]] ; then\n"
-      "\texport PATH=/snap/emacs/current/usr/bin:$PATH\n"
-      "fi\n"
+;      "if [[ ! $PATH = */snap/emacs/current/usr/bin* ]] ; then\n"
+;      "\texport PATH=/snap/emacs/current/usr/bin:$PATH\n"
+;      "fi\n"
       "export HISTCONTROL=ignoreboth\n"
       "source ~/.bashrc\n"
       "if [[ \"$TERM_PROGRAM\" = \"WezTerm\" ]]; then\n"
