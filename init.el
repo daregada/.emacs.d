@@ -794,16 +794,20 @@
   ;;   -g でリンカのエラーメッセージにも行番号が付くことが多い
   (flycheck-define-clike-checker
    c-gcc-ja
+   ;; gcc 8以降で文字列操作時に境界チェックが有効になるのでバッファオーバーフローの例が使えない
+   ;; -Wstringop-overflow=0 で境界チェックを無効にし、最適化オプション -O を外す必要がある
+   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-Wstringop-overflow=0" "-fdiagnostics-plain-output" "-std=gnu11" "-S" "-o" null-device)
    ;; 旧EDUのgcc 4では、色付けしない -fdiagnostics-plain-output オプションが使えない
-   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-O" "-S" "-o" null-device)
    ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-O" "-S" "-o" null-device)
    c-mode)
 
   ;; リンカまで実行するエラーチェッカー。倍時間がかかるため、コンパイル時に c-gcc-ja で検出できなかったときに切り替える
   (flycheck-define-clike-checker
    c-gcc-ja-with-ld
+   ;; gcc 8以降で文字列操作時に境界チェックが有効になるのでバッファオーバーフローの例が使えない
+   ;; -Wstringop-overflow=0 で境界チェックを無効にし、最適化オプション -O を外す必要がある
+   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-Wstringop-overflow=0" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-o" null-device)
    ;; 旧EDUのgcc 4では、色付けしない -fdiagnostics-plain-output オプションが使えない
-   ("gcc" "-fshow-column" "-Wall" "-Wextra" "-fdiagnostics-plain-output" "-std=gnu11" "-g" "-O" "-o" null-device)
    ;; ("gcc" "-fshow-column" "-Wall" "-Wextra" "-std=gnu11" "-g" "-O" "-o" null-device)
    c-mode)
 
@@ -1063,10 +1067,21 @@
         (if (or (search-forward "warning:" nil t)
                 (search-forward "警告:" nil t)) t nil))))
 
+  ;; 指定したバッファにエラーがあるか調べる
+  (defun compilation-buffer-has-error-p (buf)
+    (save-current-buffer
+      (set-buffer buf)
+      (save-excursion
+        (goto-char (point-min))
+        (if (or (search-forward "error:" nil t)
+                (search-forward "エラー:" nil t)) t nil))))
+
   ;; compilationバッファにエラー・警告があればflycheck-errors、なければshellに切り替え
   (defun switch-compilation-buffer (buf str)
-    (cond ((or (string-match "abnormally" str)
-             (compilation-buffer-has-warning-p buf))
+    (message (format "**** compile result is '%s'" str))
+    (cond ((or (string-match "exited abnormally" str)
+               (compilation-buffer-has-error-p buf)
+               (compilation-buffer-has-warning-p buf))
          (setq has-error-or-warnings t)
          (message "エラー・警告を修正してください")
          ;; flycheck-errorsにリストがあればflycheck-errorsに切り換える
@@ -1140,7 +1155,7 @@
              (setq my-command (format "./%s" file-base))
              ;; コンパイルコマンドにファイル名などを埋め込む
              (set (make-local-variable 'compile-command)
-                  (format "gcc -Wall -Wextra -fdiagnostics-plain-output -std=gnu11 -lm -g -O -o%s %s" file-base file-name))
+                  (format "gcc -Wall -Wextra -Wstringop-overflow=0 -fdiagnostics-plain-output -std=gnu11 -lm -g -o%s %s" file-base file-name))
              ;; コンパイルを実行。画面が自動分割されて変換結果が表示される
              ;; コンパイル完了後はswitch-compilation-bufferが呼び出されてflycheck-errors-listに切り替わる
              (compile (eval compile-command))
