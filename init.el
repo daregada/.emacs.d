@@ -85,17 +85,14 @@
 
 
 
-
-
-;; leafの読み込み
+;; gnu-elpa-keyringsの読み込み(GPG鍵の更新)
 (eval-and-compile
+  (customize-set-variable 'package-check-signature nil)
   (customize-set-variable
    'package-archives '(("gnu"   . "https://elpa.gnu.org/packages/")
-                       ("melpa" . "https://melpa.org/packages/")
-                       ("org"   . "https://orgmode.org/elpa/")))
+                       ))
   (package-initialize)
-  (unless (package-installed-p 'leaf)
-    
+  (unless (package-installed-p 'gnu-elpa-keyring-update)
     (with-current-buffer (get-buffer "*scratch*")
       (lightweight-buffer-mode)
       (setq header-line-format
@@ -107,6 +104,21 @@
               "最上行がオレンジ色になるまでお待ちください。\n\n")
       (redisplay))
     
+    (package-refresh-contents)
+    (package-install 'gnu-elpa-keyring-update))
+  )
+
+
+;; leafの読み込み
+(eval-and-compile
+  (customize-set-variable 'package-check-signature 'allow-unsigned)
+  (customize-set-variable
+   'package-archives '(("gnu"   . "https://elpa.gnu.org/packages/")
+                       ("melpa" . "https://melpa.org/packages/")
+                       ("org"   . "https://orgmode.org/elpa/")
+                       ))
+
+  (unless (package-installed-p 'leaf)
     (package-refresh-contents)
     (package-install 'leaf))
 
